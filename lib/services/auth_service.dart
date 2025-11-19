@@ -4,18 +4,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  bool _isGoogleSignInInitialized = false;
 
-  // Get current user
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (!_isGoogleSignInInitialized) {
+      await _googleSignIn.initialize();
+      _isGoogleSignInInitialized = true;
+    }
+  }
+
   User? getCurrentUser() {
     return _auth.currentUser;
   }
 
-  // Auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Register with email and password
   Future<User?> registerWithEmail(String email, String password) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -24,7 +30,6 @@ class AuthService {
       );
       User? user = result.user;
       
-      // Create user document in Firestore
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).set({
           'email': email,
@@ -37,14 +42,13 @@ class AuthService {
       return user;
     } on FirebaseAuthException catch (e) {
       print('Registration error: ${e.code} - ${e.message}');
-      throw e;
+      rethrow;
     } catch (e) {
       print('Error: $e');
       return null;
     }
   }
 
-  // Sign in with email and password
   Future<User?> signInWithEmail(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -54,70 +58,68 @@ class AuthService {
       return result.user;
     } on FirebaseAuthException catch (e) {
       print('Sign in error: ${e.code} - ${e.message}');
-      throw e;
+      rethrow;
     } catch (e) {
       print('Error: $e');
       return null;
     }
   }
 
-  // Sign in with Google
   Future<User?> signInWithGoogle() async {
     try {
-      // Trigger Google Sign-In flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      await _ensureGoogleSignInInitialized();
       
-      // User canceled sign-in
-      if (googleUser == null) return null;
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      
+      if (idToken == null) {
+        print('Failed to get ID token');
+        return null;
+      }
 
-      // Obtain auth details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create Firebase credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        idToken: idToken,
+        accessToken: null,
       );
 
-      // Sign in to Firebase
       UserCredential result = await _auth.signInWithCredential(credential);
       User? user = result.user;
 
-      // Create/update user document
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).set({
           'email': user.email,
-          'displayName': user.displayName,
-          'photoURL': user.photoURL,
+          'displayName': user.displayName ?? googleUser.displayName,
+          'photoURL': user.photoURL ?? googleUser.photoUrl,
           'lastSignIn': FieldValue.serverTimestamp(),
           'subjects': [],
         }, SetOptions(merge: true));
       }
 
       return user;
+    } on GoogleSignInException catch (e) {
+      print('Google Sign-In error: ${e.code} - ${e.description}');  // FIXED: .description
+      return null;
     } on FirebaseAuthException catch (e) {
-      print('Google sign in error: ${e.code} - ${e.message}');
-      throw e;
+      print('Firebase auth error: ${e.code} - ${e.message}');
+      rethrow;
     } catch (e) {
-      print('Error: $e');
+      print('Unexpected error: $e');
       return null;
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  // Add subjects to user
   Future<void> addSubject(String userId, String subject) async {
     await _firestore.collection('users').doc(userId).update({
       'subjects': FieldValue.arrayUnion([subject])
     });
   }
 
-  // Get user data
   Future<Map<String, dynamic>?> getUserData(String userId) async {
     DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
     if (doc.exists) {
