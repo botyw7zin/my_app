@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // required after flutterfire configure
 import 'screens/home.dart';
+import 'screens/Splash.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -21,7 +22,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'my app',
       debugShowCheckedModeBanner: false,
-      home: Home(), // <- show the purple page
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashPage(), // splash screen is home
+        '/home': (context) => const Home(),    // main dashboard
+      },
     );
   }
 }

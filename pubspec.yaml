@@ -56,6 +56,13 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  fonts:
+    - family: Lexend Deca
+      fonts:
+        - asset: assets\images\fonts\Lexend_Deca\static\LexendDeca-Bold.ttf
+  assets:
+    - assets/images/StudySync.png
+
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
