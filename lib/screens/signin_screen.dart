@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/custom_button.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -23,13 +25,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _signInWithEmail() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
       try {
         final user = await _authService.signInWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        
         if (user != null && mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -45,10 +45,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
-    
     try {
       final user = await _authService.signInWithGoogle();
-      
       if (user != null && mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
@@ -64,111 +62,103 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Email field
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              
-              SizedBox(height: 16),
-              
-              // Password field
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Sign in button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _signInWithEmail,
-                  child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text('Sign In'),
-                ),
-              ),
-              
-              SizedBox(height: 12),
-              
-              // Sign up button
-              TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/signup');
-                },
-                child: Text('Don\'t have an account? Sign Up'),
-              ),
-              
-              SizedBox(height: 20),
-              
-              // Divider
-              Row(
+      backgroundColor: const Color(0xFF282C33),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top section for logo/image
+            Expanded(
+              flex: 2,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('OR'),
+                  Image.asset(
+                    'assets/images/StudySync.png',
+                    width: 240,
+                    height: 220,
                   ),
-                  Expanded(child: Divider()),
                 ],
               ),
-              
-              SizedBox(height: 20),
-              
-              // Google sign in button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
-                  icon: Icon(Icons.g_mobiledata, size: 32),
-                  label: Text('Sign in with Google'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black87,
+            ),
+            Spacer(flex: 1),
+            // Centered bottom section: fields and buttons
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Google Sign-In button at top
+                      SizedBox(
+                        width: 330,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _signInWithGoogle,
+                          icon: Image.asset('assets/images/google_Logo.png', width: 28, height: 28),
+                         label: Text(
+                                'Sign in with Google',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontFamily: 'Lexend Deca',
+                                  fontWeight: FontWeight.w800, // ExtraBold
+                                  fontSize: 16, // (adjust size as needed)
+                                ),
+                              ),
+
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: BorderSide(color: Colors.white),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      CustomTextField(
+                        hintText: 'email',
+                        controller: _emailController,
+                        obscureText: false,
+                      ),
+                      SizedBox(height: 16),
+                      CustomTextField(
+                        hintText: 'password',
+                        controller: _passwordController,
+                        obscureText: true,
+                      ),
+                      SizedBox(height: 20),
+                      SizedBox(
+                        width: 274,
+                        height: 50,
+                        child: CustomButton(
+                          text: 'LOGIN',
+                          onPressed: _isLoading ? null : _signInWithEmail,
+                          width: 274,
+                          height: 50,
+                          fontSize: 18,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/signup');
+                        },
+                        child: Text(
+                          'Don\'t have an account? Sign Up',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      SizedBox(height: 18),
+                      // <-- Divider and OR Row Removed
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
