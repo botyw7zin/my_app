@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:my_app/widgets/Custom_Button.dart';
+import 'package:my_app/widgets/custom_button.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});

@@ -66,6 +66,7 @@ flutter:
         - asset: assets\images\fonts\Lexend_Deca\static\LexendDeca-Bold.ttf
   assets:
     - assets/images/StudySync.png
+    - assets/images/google_Logo.png
 
 
   # The following line ensures that the Material Icons font is
