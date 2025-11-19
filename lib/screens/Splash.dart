@@ -57,7 +57,7 @@ class SplashPage extends StatelessWidget {
                     height: 60,
                     fontSize: 24,
                     onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/home');
+                      Navigator.pushReplacementNamed(context, '/login');
                     },
                   )
                 ],
