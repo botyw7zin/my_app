@@ -44,9 +44,10 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(), // Use AuthWrapper instead of direct SplashPage
       routes: {
         '/splash': (context) => const SplashPage(),
-        '/home': (context) => const Home(),
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
+        '/home': (context) => const Home()
+        
       },
     );
   }
