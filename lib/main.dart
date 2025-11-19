@@ -7,7 +7,6 @@ import 'screens/home.dart';
 import 'screens/Splash.dart';
 import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
-import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +29,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'my app',
+      title: 'My App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -41,39 +40,11 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashPage(), // Use AuthWrapper instead of direct SplashPage
+      home: const SplashPage(), // Start with Splash
       routes: {
-        '/splash': (context) => const SplashPage(),
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
-        '/home': (context) => const Home()
-        
-      },
-    );
-  }
-}
-
-// Auth wrapper to handle authentication state
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Show loading while checking auth state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SplashPage();
-        }
-        
-        // If user is logged in, go to home
-        if (snapshot.hasData) {
-          return const Home();
-        }
-        
-        // If user is not logged in, go to login
-        return LoginScreen();
+        '/home': (context) => const Home(),
       },
     );
   }
