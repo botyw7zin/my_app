@@ -6,8 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.myapp"  // Change to your package name
+    namespace = "com.example.myapp"
     compileSdk = 34
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -20,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.myapp"  // Change to your package name
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
