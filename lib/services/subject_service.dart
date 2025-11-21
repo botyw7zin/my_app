@@ -303,6 +303,36 @@ class SubjectService {
     }
   }
 
+  /// Get all subjects (non-deleted) from Hive
+List<Subject> getAllSubjects() {
+  final subjectBox = Hive.box<Subject>('subjectsBox');
+  return subjectBox.values
+      .where((subject) => !subject.isDeleted)
+      .toList()
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Most recent first
+}
+
+/// Get subjects by type
+List<Subject> getSubjectsByType(String type) {
+  return getAllSubjects()
+      .where((subject) => subject.type == type)
+      .toList();
+}
+
+/// Get subjects by status
+List<Subject> getSubjectsByStatus(String status) {
+  return getAllSubjects()
+      .where((subject) => subject.status == status)
+      .toList();
+}
+
+/// Calculate total hour goal across all subjects
+int getTotalHourGoal() {
+  return getAllSubjects()
+      .fold(0, (sum, subject) => sum + subject.hourGoal);
+}
+
+
   /// ---- For Workmanager/background sync ----
   static Future<void> backgroundSyncToFirebase() async {
     print(">>> [backgroundSyncToFirebase] Background sync task started");
@@ -371,3 +401,5 @@ class SubjectService {
     }
   }
 }
+
+
