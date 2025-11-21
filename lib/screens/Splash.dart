@@ -21,11 +21,9 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeApp() async {
     await Future.delayed(const Duration(milliseconds: 1500));
-
     if (!mounted) return;
 
     final user = FirebaseAuth.instance.currentUser;
-
     if (user != null) {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
@@ -35,71 +33,127 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
+  // Clean splotch without shadows
+  Widget buildGlowySplotch({
+    required double left,
+    required double top,
+    required double size,
+    required Color color,
+    double borderRadius = 28,
+    double blurSigma = 40,
+  }) {
+    final core = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        gradient: RadialGradient(
+          center: Alignment(-0.2, -0.2),
+          radius: 0.9,
+          colors: [
+            color.withOpacity(0.35),
+            color.withOpacity(0.12),
+            color.withOpacity(0.02),
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        // boxShadow removed for cleaner look
+      ),
+    );
+
+    return Positioned(
+      left: left,
+      top: top,
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: core,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       body: Stack(
         children: [
-          // Blurry yellow splotch - top left
-          Positioned(
+          // Blue splotches
+          buildGlowySplotch(
+            left: -20,
             top: 30,
-            left: -50,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 45, sigmaY: 45),
-                child: Container(
-                  width: 180,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.yellowAccent.withOpacity(0.23),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
+            size: 75,
+            color: const Color(0xFF46BDF0),
+            borderRadius: 18,
+            blurSigma: 32,
           ),
-          // Blurry yellow splotch - bottom right
-          Positioned(
-            bottom: -60,
-            right: -40,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                child: Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: Colors.yellow.withOpacity(0.18),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
+          buildGlowySplotch(
+            left: w - 90,
+            top: 60,
+            size: 65,
+            color: const Color(0xFF46BDF0),
+            borderRadius: 16,
+            blurSigma: 30,
           ),
-          // Optional: another splotch - bottom left
-          Positioned(
-            bottom: 50,
-            left: -50,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 54, sigmaY: 54),
-                child: Container(
-                  width: 130,
-                  height: 130,
-                  decoration: BoxDecoration(
-                    color: Colors.amberAccent.withOpacity(0.16),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
+          buildGlowySplotch(
+            left: w - 100,
+            top: h - 160,
+            size: 85,
+            color: const Color(0xFF46BDF0),
+            borderRadius: 20,
+            blurSigma: 34,
           ),
-          // Foreground: your splash content
+          
+          // Yellow splotches
+          buildGlowySplotch(
+            left: 20,
+            top: h - 190,
+            size: 70,
+            color: const Color(0xFFEDF046),
+            borderRadius: 17,
+            blurSigma: 32,
+          ),
+          buildGlowySplotch(
+            left: w / 2 - 40,
+            top: h / 3,
+            size: 60,
+            color: const Color(0xFFEDF046),
+            borderRadius: 15,
+            blurSigma: 28,
+          ),
+          buildGlowySplotch(
+            left: w / 2 + 50,
+            top: 80,
+            size: 68,
+            color: const Color(0xFFEDF046),
+            borderRadius: 16,
+            blurSigma: 30,
+          ),
+          
+          // Purple/teal
+          buildGlowySplotch(
+            left: 35,
+            top: h / 2 - 70,
+            size: 65,
+            color: const Color(0xFF7A6BFF),
+            borderRadius: 16,
+            blurSigma: 30,
+          ),
+          buildGlowySplotch(
+            left: w / 2 + 25,
+            top: h - 140,
+            size: 58,
+            color: const Color(0xFF5EE0B8),
+            borderRadius: 14,
+            blurSigma: 28,
+          ),
+
+          // Main content
           SafeArea(
             child: Column(
               children: [
-                // Image section, centered higher on the page
                 Expanded(
                   flex: 2,
                   child: Column(
@@ -114,7 +168,6 @@ class _SplashPageState extends State<SplashPage> {
                   ),
                 ),
                 Spacer(flex: 1),
-                // Bottom section: Title, Description, and Button
                 Padding(
                   padding: const EdgeInsets.only(bottom: 48),
                   child: Column(

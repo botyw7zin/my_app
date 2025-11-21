@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/subject_service.dart';
+import '../widgets/custom_button.dart';
 
 class AddSubjectScreen extends StatefulWidget {
   const AddSubjectScreen({super.key});
@@ -17,7 +18,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
   final _descriptionController = TextEditingController();
   final _hourGoalController = TextEditingController();
   
-  String _selectedType = 'study';
+  String _selectedType = 'personal';
   DateTime? _selectedDeadline;
 
   @override
@@ -38,7 +39,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Colors.deepPurple,
+              primary: Color(0xFF7550FF),
               onPrimary: Colors.white,
               surface: Color(0xFF2C2F3E),
               onSurface: Colors.white,
@@ -56,76 +57,190 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
     }
   }
 
-  // In _createSubject()
-Future<void> _createSubject() async {
-  if (_formKey.currentState!.validate()) {
-    print('>>> [AddSubjectScreen] Creating subject: ${_nameController.text}');
-    try {
-      await _subjectService.createSubject(
-        name: _nameController.text,
-        description: _descriptionController.text,
-        type: _selectedType,
-        deadline: _selectedDeadline,
-        hourGoal: int.parse(_hourGoalController.text),
-      );
+  Future<void> _createSubject() async {
+    if (_formKey.currentState!.validate()) {
+      print('>>> [AddSubjectScreen] Creating subject: ${_nameController.text}');
+      try {
+        await _subjectService.createSubject(
+          name: _nameController.text,
+          description: _descriptionController.text,
+          type: _selectedType,
+          deadline: _selectedDeadline,
+          hourGoal: int.parse(_hourGoalController.text),
+        );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Subject created successfully!')),
-        );
-        Navigator.pop(context); // Go back to home
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating subject: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Subject created successfully!')),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error creating subject: $e')),
+          );
+        }
       }
     }
   }
-}
 
+  // Custom input field widget matching the design
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required String? Function(String?) validator,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    Widget? icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: Colors.black, fontSize: 16),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF7550FF), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            prefixIcon: icon,
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       appBar: AppBar(
-        title: const Text('Create Subject'),
-        backgroundColor: Colors.deepPurple,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        backgroundColor: const Color(0xFF2C2F3E),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Name Field
-              TextFormField(
+              // Type Dropdown
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'type',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE4E4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFFFF6B6B),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedType,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'personal',
+                                  child: Text('personal'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'study',
+                                  child: Text('study'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedType = value!;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.favorite_border, color: Colors.black54),
+                          onPressed: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Subject Name
+              _buildInputField(
+                label: 'subject or Project Name',
                 controller: _nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Subject Name',
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.book, color: Colors.deepPurple),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white24),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red, width: 2),
-                  ),
-                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a subject name';
@@ -133,35 +248,13 @@ Future<void> _createSubject() async {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // Description Field
-              TextFormField(
+              // Description
+              _buildInputField(
+                label: 'Description',
                 controller: _descriptionController,
-                style: const TextStyle(color: Colors.white),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.description, color: Colors.deepPurple),
-                  alignLabelWithHint: true,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white24),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red, width: 2),
-                  ),
-                ),
+                maxLines: 4,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a description';
@@ -169,153 +262,149 @@ Future<void> _createSubject() async {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // Type Selector
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white24),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Subject Type',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+              // Objective (Hour Goal)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'objective',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
                       children: [
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('Study', style: TextStyle(color: Colors.white)),
-                            value: 'study',
-                            groupValue: _selectedType,
-                            activeColor: Colors.deepPurple,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedType = value!;
-                              });
-                            },
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8E0FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.access_time,
+                            color: Color(0xFF7550FF),
+                            size: 20,
                           ),
                         ),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('Personal', style: TextStyle(color: Colors.white)),
-                            value: 'personal',
-                            groupValue: _selectedType,
-                            activeColor: Colors.deepPurple,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedType = value!;
-                              });
+                          child: TextFormField(
+                            controller: _hourGoalController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: '30 hours',
+                              hintStyle: TextStyle(color: Colors.black54),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter an hour goal';
+                              }
+                              final hours = int.tryParse(value);
+                              if (hours == null || hours <= 0) {
+                                return 'Please enter a valid number';
+                              }
+                              return null;
                             },
                           ),
                         ),
                       ],
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Deadline (Optional)
+              InkWell(
+                onTap: _selectDeadline,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'deadline',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7550FF).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.calendar_today,
+                              color: Color(0xFF7550FF),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _selectedDeadline == null
+                                  ? 'Select deadline (optional)'
+                                  : '${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}',
+                              style: TextStyle(
+                                color: _selectedDeadline == null 
+                                    ? Colors.white54 
+                                    : Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          if (_selectedDeadline != null)
+                            IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.red, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedDeadline = null;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
 
-              // Deadline Picker
-              InkWell(
-                onTap: _selectDeadline,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white24),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today, color: Colors.deepPurple),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _selectedDeadline == null
-                              ? 'Select Deadline (Optional)'
-                              : 'Deadline: ${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}',
-                          style: TextStyle(
-                            color: _selectedDeadline == null ? Colors.white70 : Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      if (_selectedDeadline != null)
-                        IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              _selectedDeadline = null;
-                            });
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Hour Goal Field
-              TextFormField(
-                controller: _hourGoalController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Hour Goal',
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.timer, color: Colors.deepPurple),
-                  suffixText: 'hours',
-                  suffixStyle: const TextStyle(color: Colors.white70),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white24),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red, width: 2),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an hour goal';
-                  }
-                  final hours = int.tryParse(value);
-                  if (hours == null || hours <= 0) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 30),
-
-              // Create Button
-              ElevatedButton(
+              // Add Button using CustomButton
+              CustomButton(
+                text: 'Add',
                 onPressed: _createSubject,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Create Subject',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                width: double.infinity,
+                height: 54,
+                fontSize: 18,
+                backgroundColor: const Color(0xFF7550FF),
               ),
             ],
           ),
