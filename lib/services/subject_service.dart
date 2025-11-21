@@ -1,22 +1,25 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/subject_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive/hive.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
+import '../models/subject_model.dart';
 
 class SubjectService {
-  static const String _boxName = 'subjectsBox';
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final _uuid = const Uuid();
+  // Singleton implementation
+  static final SubjectService _instance = SubjectService._internal();
+  factory SubjectService() => _instance;
+  SubjectService._internal();
 
-  // Modified getter to ensure box is open
-  Future<Box<Subject>> get _subjectBox async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return await Hive.openBox<Subject>(_boxName);
-    }
-    return Hive.box<Subject>(_boxName);
+  final _firestore = FirebaseFirestore.instance;
+
+  bool _connectivityListening = false;
+
+  Future<bool> _isOnline() async {
+    final conn = await Connectivity().checkConnectivity();
+    return conn == ConnectivityResult.mobile || conn == ConnectivityResult.wifi;
   }
 
-  // CREATE
   Future<void> createSubject({
     required String name,
     required String description,
@@ -24,10 +27,11 @@ class SubjectService {
     DateTime? deadline,
     required int hourGoal,
   }) async {
-    final box = await _subjectBox;
+    final subjectBox = Hive.box<Subject>('subjectsBox');
     final now = DateTime.now();
+    final subjectId = Uuid().v4();
     final subject = Subject(
-      id: _uuid.v4(),
+      id: subjectId,
       name: name,
       description: description,
       type: type,
@@ -35,126 +39,162 @@ class SubjectService {
       hourGoal: hourGoal,
       createdAt: now,
       updatedAt: now,
+      isSynced: false,
+      isDeleted: false,
+      status: 'in progress',
     );
-
-    await box.put(subject.id, subject);
-    print('✅ Subject created: ${subject.name}');
-  }
-
-  // READ (get all)
-  Future<List<Subject>> getAllSubjects() async {
-    final box = await _subjectBox;
-    return box.values.toList();
-  }
-
-  // READ (get by ID)
-  Future<Subject?> getSubject(String id) async {
-    final box = await _subjectBox;
-    return box.get(id);
-  }
-
-  // READ (stream for real-time updates)
-  Stream<List<Subject>> watchSubjects() async* {
-    final box = await _subjectBox;
-    await for (var _ in box.watch()) {
-      yield box.values.toList();
+    await subjectBox.put(subjectId, subject);
+    print('>>> [createSubject] Created subject in Hive: $subjectId - $name');
+    if (await _isOnline()) {
+      print('>>> [createSubject] Online, syncing now');
+      await syncToFirebase();
+    } else {
+      print('>>> [createSubject] Offline, pending sync');
     }
   }
 
-  // UPDATE
   Future<void> updateSubject(
-    String id, {
+    Subject subject, {
     String? name,
     String? description,
     String? type,
     DateTime? deadline,
     int? hourGoal,
   }) async {
-    final box = await _subjectBox;
-    final subject = box.get(id);
-    if (subject == null) {
-      print('🔴 Subject not found: $id');
+    final now = DateTime.now();
+    if (name != null) subject.name = name;
+    if (description != null) subject.description = description;
+    if (type != null) subject.type = type;
+    if (deadline != null) subject.deadline = deadline;
+    if (hourGoal != null) subject.hourGoal = hourGoal;
+    subject.updatedAt = now;
+    // Status logic
+    if (subject.hourGoal <= 0) {
+      subject.status = 'done';
+    } else if (subject.deadline != null &&
+        now.isAfter(subject.deadline!) &&
+        subject.status != 'done') {
+      subject.status = 'late';
+    } else if (subject.status != 'done') {
+      subject.status = 'in progress';
+    }
+    subject.isSynced = false;
+    await subject.save();
+
+    print('>>> [updateSubject] Updated subject: ${subject.id} - ${subject.name}');
+    if (await _isOnline()) {
+      print('>>> [updateSubject] Online, syncing now');
+      await syncToFirebase();
+    }
+  }
+
+  Future<void> deleteSubject(Subject subject) async {
+    subject.isDeleted = true;
+    subject.isSynced = false;
+    await subject.save();
+    print('>>> [deleteSubject] Marked for deletion: ${subject.id} - ${subject.name}');
+    if (await _isOnline()) {
+      print('>>> [deleteSubject] Online, syncing now');
+      await syncToFirebase();
+    }
+  }
+
+  Future<void> syncToFirebase() async {
+    final subjectBox = Hive.box<Subject>('subjectsBox');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('>>> [syncToFirebase] No auth user, skipping.');
       return;
     }
+    final now = DateTime.now();
 
-    final updatedSubject = Subject(
-      id: subject.id,
-      name: name ?? subject.name,
-      description: description ?? subject.description,
-      type: type ?? subject.type,
-      deadline: deadline ?? subject.deadline,
-      hourGoal: hourGoal ?? subject.hourGoal,
-      createdAt: subject.createdAt,
-      updatedAt: DateTime.now(),
-    );
-
-    await box.put(id, updatedSubject);
-    print('✅ Subject updated: ${updatedSubject.name}');
-  }
-
-  // DELETE
-  Future<void> deleteSubject(String id) async {
-    final box = await _subjectBox;
-    await box.delete(id);
-    print('✅ Subject deleted: $id');
-  }
-
-// SYNC TO FIREBASE (called on sign-out)
-  Future<void> syncToFirebase(String userId) async {
-  try {
-    print('🔵 Syncing subjects to Firebase...');
-    
-    final subjects = await getAllSubjects();
-    final subjectsJson = subjects.map((s) => s.toJson()).toList();
-
-    // Use set with merge instead of update - creates document if it doesn't exist
-    await _firestore.collection('users').doc(userId).set({
-      'subjects': subjectsJson,
-    }, SetOptions(merge: true));  // ← Changed from update() to set()
-
-    print('✅ Synced ${subjects.length} subjects to Firebase');
-  } catch (e) {
-    print('🔴 Error syncing to Firebase: $e');
-    rethrow;
-  }
-}
-
-  // LOAD FROM FIREBASE (called on sign-in)
-  Future<void> loadFromFirebase(String userId) async {
-    try {
-      print('🔵 Loading subjects from Firebase...');
-      
-      final doc = await _firestore.collection('users').doc(userId).get();
-      if (!doc.exists) return;
-
-      final data = doc.data();
-      if (data == null || data['subjects'] == null) return;
-
-      final List<dynamic> subjectsJson = data['subjects'];
-      
-      // Get box reference
-      final box = await _subjectBox;
-      
-      // Clear existing Hive data
-      await box.clear();
-      
-      // Load subjects into Hive
-      for (var json in subjectsJson) {
-        final subject = Subject.fromJson(json);
-        await box.put(subject.id, subject);
+    // Mark as late if deadline has passed
+    for (final subject in subjectBox.values) {
+      if (subject.hourGoal > 0 &&
+          subject.deadline != null &&
+          now.isAfter(subject.deadline!) &&
+          subject.status != 'done' &&
+          subject.status != 'late') {
+        subject.status = 'late';
+        subject.isSynced = false;
+        await subject.save();
       }
+    }
 
-      print('✅ Loaded ${subjectsJson.length} subjects from Firebase');
-    } catch (e) {
-      print('🔴 Error loading from Firebase: $e');
-      rethrow;
+    // Sync new/updated
+    for (final subject in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
+      print('>>> [syncToFirebase] Syncing: ${subject.id} - ${subject.name}');
+      try {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('subjects')
+            .doc(subject.id)
+            .set(subject.toJson());
+        subject.isSynced = true;
+        await subject.save();
+        print('>>> [syncToFirebase] Synced to Firestore: ${subject.id}');
+      } catch (e) {
+        print('Firestore sync error for subject ${subject.id}: $e');
+      }
+    }
+
+    // Sync deletions
+    for (final subject in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
+      print('>>> [syncToFirebase] Remote delete: ${subject.id}');
+      try {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('subjects')
+            .doc(subject.id)
+            .delete();
+        await subject.delete();
+        print('>>> [syncToFirebase] Deleted in Firestore and Hive: ${subject.id}');
+      } catch (e) {
+        print('Firestore delete error for subject ${subject.id}: $e');
+      }
     }
   }
 
-  // CLEAR LOCAL DATA (called on sign-out)
+  // Call this ONCE per session after login
+  void listenForConnectivityChanges() {
+    if (_connectivityListening) return;
+    _connectivityListening = true;
+    Connectivity().onConnectivityChanged.listen((conn) async {
+      print('>>> [listenForConnectivityChanges] Connectivity changed: $conn');
+      final user = FirebaseAuth.instance.currentUser;
+      print('>>> [listenForConnectivityChanges] user: ${user?.uid}');
+      final subjectBox = Hive.box<Subject>('subjectsBox');
+      print('>>> [listenForConnectivityChanges] Unsynced: ${subjectBox.values.where((s) => !s.isSynced).length}');
+      if (conn == ConnectivityResult.mobile || conn == ConnectivityResult.wifi) {
+        await syncToFirebase();
+      }
+    });
+  }
+
   Future<void> clearLocalData() async {
-    final box = await _subjectBox;
-    await box.clear();
-    print('✅ Cleared local subject data');
+    final subjectBox = Hive.box<Subject>('subjectsBox');
+    await subjectBox.clear();
+    print('>>> [clearLocalData] Local subjects cleared');
+  }
+
+  Future<void> loadFromFirebase(String userId) async {
+    final subjectBox = Hive.box<Subject>('subjectsBox');
+    final snap = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('subjects')
+        .get();
+    print('>>> [loadFromFirebase] Fetching remote subjects...');
+    for (final doc in snap.docs) {
+      final remoteJson = doc.data();
+      final remote = Subject.fromJson(remoteJson);
+      final local = subjectBox.get(remote.id);
+      if (local == null || local.updatedAt.isBefore(remote.updatedAt)) {
+        await subjectBox.put(remote.id, remote);
+        print('>>> [loadFromFirebase] Updated local subject: ${remote.id}');
+      }
+    }
   }
 }

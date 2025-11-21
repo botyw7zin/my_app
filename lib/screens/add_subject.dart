@@ -56,32 +56,35 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
     }
   }
 
-  Future<void> _createSubject() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        await _subjectService.createSubject(
-          name: _nameController.text,
-          description: _descriptionController.text,
-          type: _selectedType,
-          deadline: _selectedDeadline,
-          hourGoal: int.parse(_hourGoalController.text),
-        );
+  // In _createSubject()
+Future<void> _createSubject() async {
+  if (_formKey.currentState!.validate()) {
+    print('>>> [AddSubjectScreen] Creating subject: ${_nameController.text}');
+    try {
+      await _subjectService.createSubject(
+        name: _nameController.text,
+        description: _descriptionController.text,
+        type: _selectedType,
+        deadline: _selectedDeadline,
+        hourGoal: int.parse(_hourGoalController.text),
+      );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Subject created successfully!')),
-          );
-          Navigator.pop(context); // Go back to home
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating subject: $e')),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subject created successfully!')),
+        );
+        Navigator.pop(context); // Go back to home
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating subject: $e')),
+        );
       }
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

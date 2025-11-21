@@ -11,7 +11,7 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SubjectService _subjectService = SubjectService();
-  
+
   bool _isGoogleSignInInitialized = false;
 
   Future<void> _ensureGoogleSignInInitialized() async {
@@ -21,96 +21,90 @@ class AuthService {
     }
   }
 
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
-
+  User? getCurrentUser() => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // REGISTER
-  Future<User?> registerWithEmail(String email, String password) async {
+  Future<User?> registerWithEmail(String email, String password, String username) async {
     try {
-      print('🔵 Registering user: $email');
-      
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      print('🔵 [registerWithEmail] Registering user: $email');
+      UserCredential result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       User? user = result.user;
-      
+
       if (user != null) {
+        final String defaultPhotoUrl = 'assets/cat.png';
         await _firestore.collection('users').doc(user.uid).set({
           'email': email,
-          'displayName': email.split('@')[0],
+          'displayName': username,
+          'photoURL': defaultPhotoUrl,
           'createdAt': FieldValue.serverTimestamp(),
-          'subjects': [],
         });
-        
         final userBox = Hive.box('userBox');
         await userBox.put('userId', user.uid);
         await userBox.put('email', email);
-        await userBox.put('displayName', email.split('@')[0]);
-        
-        print('✅ Registration successful');
+        await userBox.put('displayName', username);
+        await userBox.put('photoURL', defaultPhotoUrl);
+
+        print('✅ [registerWithEmail] Registration successful for ${user.uid}');
       }
-      
       return user;
     } on FirebaseAuthException catch (e) {
-      print('🔴 Registration error: ${e.code} - ${e.message}');
+      print('🔴 [registerWithEmail] Registration error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
-      print('🔴 Error: $e');
+      print('🔴 [registerWithEmail] Error: $e');
       return null;
     }
   }
 
-  // SIGN IN
   Future<User?> signInWithEmail(String email, String password) async {
     try {
-      print('🔵 Signing in: $email');
-      
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
+      print('🔵 [signInWithEmail] Signing in: $email');
+      UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
       User? user = result.user;
-      
+
       if (user != null) {
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final data = userDoc.data();
         final userBox = Hive.box('userBox');
+
+        if (!userDoc.exists || data == null || !data.containsKey('photoURL')) {
+          await _firestore.collection('users').doc(user.uid).set({
+            'email': user.email,
+            'displayName': user.displayName ?? 'User',
+            'photoURL': 'assets/cat.png',
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          await userBox.put('photoURL', 'assets/cat.png');
+        }
+
         await userBox.put('userId', user.uid);
         await userBox.put('email', user.email);
-        await userBox.put('displayName', user.displayName ?? email.split('@')[0]);
-        
-        // Load subjects from Firebase
+        await userBox.put('displayName', data?['displayName'] ?? user.displayName ?? '');
+        await userBox.put('photoURL', data?['photoURL'] ?? 'assets/cat.png');
+
+        print('✅ [signInWithEmail] Signed in user: ${user.uid}');
         await _subjectService.loadFromFirebase(user.uid);
-        
-        print('✅ Sign in successful');
       }
-      
       return user;
     } on FirebaseAuthException catch (e) {
-      print('🔴 Sign in error: ${e.code} - ${e.message}');
+      print('🔴 [signInWithEmail] Sign in error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
-      print('🔴 Error: $e');
+      print('🔴 [signInWithEmail] Error: $e');
       return null;
     }
   }
 
-  // GOOGLE SIGN IN
   Future<User?> signInWithGoogle() async {
     try {
-      print('🔵 Starting Google Sign-In');
-      
+      print('🔵 [signInWithGoogle] Starting Google Sign-In');
       await _ensureGoogleSignInInitialized();
-      
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
-      
+
       if (idToken == null) {
-        print('🔴 Failed to get ID token');
+        print('🔴 [signInWithGoogle] Failed to get ID token');
         return null;
       }
 
@@ -118,70 +112,55 @@ class AuthService {
         idToken: idToken,
         accessToken: null,
       );
-
       UserCredential result = await _auth.signInWithCredential(credential);
       User? user = result.user;
 
       if (user != null) {
-        // Check if user exists
         final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        
-        if (!userDoc.exists) {
-          // New user - create document
-          await _firestore.collection('users').doc(user.uid).set({
-            'email': user.email,
-            'displayName': user.displayName ?? googleUser.displayName,
-            'photoURL': user.photoURL ?? googleUser.photoUrl,
-            'subjects': [],
-          });
-        } else {
-          // Existing user - load subjects
-          await _subjectService.loadFromFirebase(user.uid);
-        }
-        
+        final String displayName = user.displayName ?? googleUser.displayName ?? 'Google User';
+        final String googlePhotoUrl = user.photoURL ?? googleUser.photoUrl ?? 'assets/cat.png';
+
+        await _firestore.collection('users').doc(user.uid).set({
+          'email': user.email,
+          'displayName': displayName,
+          'photoURL': googlePhotoUrl,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         final userBox = Hive.box('userBox');
         await userBox.put('userId', user.uid);
         await userBox.put('email', user.email);
-        await userBox.put('displayName', user.displayName ?? googleUser.displayName);
-        await userBox.put('photoURL', user.photoURL ?? googleUser.photoUrl);
-        
-        print('✅ Google Sign-In successful: ${user.email}');
+        await userBox.put('displayName', displayName);
+        await userBox.put('photoURL', googlePhotoUrl);
+
+        print('✅ [signInWithGoogle] Signed in user: ${user.uid}');
+        await _subjectService.loadFromFirebase(user.uid);
       }
 
       return user;
     } on GoogleSignInException catch (e) {
-      print('🔴 Google Sign-In error: ${e.code} - ${e.description}');
+      print('🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
       return null;
     } on FirebaseAuthException catch (e) {
-      print('🔴 Firebase auth error: ${e.code} - ${e.message}');
+      print('🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
-      print('🔴 Unexpected error: $e');
+      print('🔴 [signInWithGoogle] Unexpected error: $e');
       return null;
     }
   }
 
-  // SIGN OUT - Sync to Firebase then clear and navigate to splash
   Future<void> signOut(BuildContext context) async {
     try {
-      final user = _auth.currentUser;
-      
-      if (user != null) {
-        // Sync subjects to Firebase before signing out
-        await _subjectService.syncToFirebase(user.uid);
-      }
-      
       await _googleSignIn.signOut();
       await _auth.signOut();
-      
-      // Clear all local data
+
       final userBox = Hive.box('userBox');
       await userBox.clear();
       await _subjectService.clearLocalData();
-      
-      print('✅ Signed out, synced to Firebase, and cleared cache');
-      
-      // Navigate to splash page and remove all previous routes
+
+      print('✅ [signOut] Signed out, cache cleared.');
+
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -190,7 +169,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('❌ Sign out error: $e');
+      print('❌ [signOut] Sign out error: $e');
       rethrow;
     }
   }
