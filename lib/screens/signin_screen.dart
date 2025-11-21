@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
 
-                          style: OutlinedButton.styleFrom(
+                            style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white,
                             side: BorderSide(color: Colors.white),
                             foregroundColor: Colors.black,
