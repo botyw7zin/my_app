@@ -13,7 +13,8 @@ class CustomButton extends StatelessWidget {
     required this.onPressed,
     this.width = 150,
     this.height = 50,
-    this.fontSize = 18, // Default size for bigger words
+    this.fontSize = 18, 
+    required Color backgroundColor, // Default size for bigger words
   }) : super(key: key);
 
   @override
