@@ -24,8 +24,12 @@ void main() async {
   await Hive.openBox('userBox');
   await Hive.openBox<Subject>('subjectsBox');
 
+  // Initialize WorkManager for background sync
+  await SubjectService().initializeWorkManager();
+
   print('>>> [main] Firebase Auth current user: ${FirebaseAuth.instance.currentUser?.uid}');
   print('>>> [main] Hive boxes opened.');
+  print('>>> [main] WorkManager initialized.');
 
   runApp(const MyApp());
 }
