@@ -217,4 +217,54 @@ class AuthService {
       rethrow;
     }
   }
+
+  /// Send password reset email to user
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      print('🔵 [sendPasswordResetEmail] Sending reset email to: $email');
+      await _auth.sendPasswordResetEmail(email: email);
+      print('✅ [sendPasswordResetEmail] Password reset email sent');
+    } on FirebaseAuthException catch (e) {
+      print('🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('🔴 [sendPasswordResetEmail] Unexpected error: $e');
+      rethrow;
+    }
+  }
+
+  /// Change password for currently authenticated user
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      print('🔵 [changePassword] Attempting to change password');
+      final user = _auth.currentUser;
+      
+      if (user == null) {
+        print('🔴 [changePassword] No user logged in');
+        throw FirebaseAuthException(
+          code: 'no-user',
+          message: 'No user is currently logged in',
+        );
+      }
+
+      // Re-authenticate user with current password
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      
+      await user.reauthenticateWithCredential(credential);
+      print('✅ [changePassword] User re-authenticated successfully');
+
+      // Update password
+      await user.updatePassword(newPassword);
+      print('✅ [changePassword] Password changed successfully');
+    } on FirebaseAuthException catch (e) {
+      print('🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('🔴 [changePassword] Unexpected error: $e');
+      rethrow;
+    }
+  }
 }
