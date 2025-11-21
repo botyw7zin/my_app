@@ -7,6 +7,8 @@ import 'screens/home.dart';
 import 'screens/Splash.dart';
 import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
+import 'models/subject_model.dart';
+import 'services/subject_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +20,12 @@ void main() async {
 
   // Initialize Hive
   await Hive.initFlutter();
+  Hive.registerAdapter(SubjectAdapter());
   await Hive.openBox('userBox');
+  await Hive.openBox<Subject>('subjectsBox');
+
+  print('>>> [main] Firebase Auth current user: ${FirebaseAuth.instance.currentUser?.uid}');
+  print('>>> [main] Hive boxes opened.');
 
   runApp(const MyApp());
 }
@@ -40,7 +47,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashPage(), // Start with Splash
+      home: const SplashPage(),
       routes: {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),

@@ -9,6 +9,7 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -16,6 +17,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -25,13 +27,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
       try {
         final user = await _authService.registerWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
+          _nameController.text.trim(),
         );
-        
         if (user != null && mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -53,9 +54,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
         padding: EdgeInsets.all(20),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: ListView(
+            // Use ListView for scrolling and keyboard overflow!
+            shrinkWrap: true,
             children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your username';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -74,9 +92,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              
               SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _passwordController,
                 decoration: InputDecoration(
@@ -95,9 +112,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              
               SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _confirmPasswordController,
                 decoration: InputDecoration(
@@ -113,9 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              
               SizedBox(height: 24),
-              
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -126,9 +140,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       : Text('Sign Up'),
                 ),
               ),
-              
               SizedBox(height: 12),
-              
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
