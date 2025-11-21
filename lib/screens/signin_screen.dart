@@ -220,6 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 274,
                           height: 50,
                           fontSize: 18,
+                          backgroundColor: Color(0xFF7550FF)
                         ),
                       ),
                       SizedBox(height: 12),
