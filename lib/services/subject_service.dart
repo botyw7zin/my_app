@@ -332,6 +332,30 @@ int getTotalHourGoal() {
       .fold(0, (sum, subject) => sum + subject.hourGoal);
 }
 
+// Increment hours, clamp to goal, auto-set done
+Future<void> addStudyHours(Subject subject, int deltaHours) async {
+  final now = DateTime.now();
+  subject.hoursCompleted = (subject.hoursCompleted + deltaHours).clamp(0, subject.hourGoal);
+  subject.updatedAt = now;
+
+  if (subject.hoursCompleted >= subject.hourGoal && subject.hourGoal > 0) {
+    subject.status = 'done';
+  } else if (subject.deadline != null &&
+      now.isAfter(subject.deadline!) &&
+      subject.status != 'done') {
+    subject.status = 'late';
+  } else if (subject.status != 'done') {
+    subject.status = 'in progress';
+  }
+
+  subject.isSynced = false;
+  await subject.save();
+
+  if (await _isOnline()) {
+    await syncToFirebase();
+  }
+}
+
 
   /// ---- For Workmanager/background sync ----
   static Future<void> backgroundSyncToFirebase() async {
