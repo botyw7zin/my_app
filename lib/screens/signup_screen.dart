@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
+import '../widgets/background.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -77,152 +78,158 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF282C33),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 26, vertical: 13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(top: 75, bottom: 30),
-                child: Text(
-                  'Sign up',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF35E4C6),
-                    fontFamily: 'Lexend Deca',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 40,
-                  ),
-                ),
-              ),
-              // ...existing code...
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Username label + field
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Username',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontFamily: 'Lexend Deca',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        CustomTextField(
-                          hintText: 'Username',
-                          controller: _nameController,
-                          obscureText: false,
-                        ),
-                        SizedBox(height: 18),
-
-                        // E-mail label + field
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'E-mail',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontFamily: 'Lexend Deca',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        CustomTextField(
-                          hintText: 'E-mail',
-                          controller: _emailController,
-                          obscureText: false,
-                        ),
-                        SizedBox(height: 18),
-
-                        // Password label + field
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Password',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontFamily: 'Lexend Deca',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        CustomTextField(
-                          hintText: 'Password',
-                          controller: _passwordController,
-                          obscureText: true,
-                        ),
-                        SizedBox(height: 18),
-
-                        // Confirm password label + field
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Confirm password',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontFamily: 'Lexend Deca',
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        CustomTextField(
-                          hintText: 'Confirm password',
-                          controller: _confirmPasswordController,
-                          obscureText: true,
-                        ),
-                      ],
+      backgroundColor: const Color(0xFF2C2F3E),
+      body: Stack(
+        children: [
+          // Add the reusable background
+          const GlowyBackground(),
+          
+          // Main content
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 26, vertical: 13),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 75, bottom: 30),
+                    child: Text(
+                      'Sign up',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF35E4C6),
+                        fontFamily: 'Lexend Deca',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 40,
+                      ),
                     ),
                   ),
-                ),
-              ),
-// ...existing code...
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Username label + field
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Username',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontFamily: 'Lexend Deca',
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            CustomTextField(
+                              hintText: 'Username',
+                              controller: _nameController,
+                              obscureText: false,
+                            ),
+                            SizedBox(height: 18),
 
-              SizedBox(
-                width: double.infinity,
-                height: 51,
-                child: CustomButton(
-                  text: 'Sign Up',
-                  onPressed: _isLoading ? null : _signUp,
-                  width: double.infinity,
-                  height: 51,
-                  fontSize: 18,
-                  backgroundColor: Color(0xFF7550FF),
-                ),
-              ),
-              SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Already have an account? Sign In',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'Lexend Deca',
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.white,
-                  decorationThickness: 2, // Optional: makes underline more visible
-                ),
+                            // E-mail label + field
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'E-mail',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontFamily: 'Lexend Deca',
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            CustomTextField(
+                              hintText: 'E-mail',
+                              controller: _emailController,
+                              obscureText: false,
+                            ),
+                            SizedBox(height: 18),
+
+                            // Password label + field
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Password',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontFamily: 'Lexend Deca',
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            CustomTextField(
+                              hintText: 'Password',
+                              controller: _passwordController,
+                              obscureText: true,
+                            ),
+                            SizedBox(height: 18),
+
+                            // Confirm password label + field
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Confirm password',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontFamily: 'Lexend Deca',
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            CustomTextField(
+                              hintText: 'Confirm password',
+                              controller: _confirmPasswordController,
+                              obscureText: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    height: 51,
+                    child: CustomButton(
+                      text: 'Sign Up',
+                      onPressed: _isLoading ? null : _signUp,
+                      width: double.infinity,
+                      height: 51,
+                      fontSize: 18,
+                      backgroundColor: Color(0xFF7550FF),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Already have an account? Sign In',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Lexend Deca',
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.white,
+                          decorationThickness: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }
-          }
+        ],
+      ),
+    );
+  }
+}
