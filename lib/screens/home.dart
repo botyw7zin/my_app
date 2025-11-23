@@ -4,6 +4,8 @@ import '../widgets/nav_components.dart';
 import '../services/auth_service.dart';
 import 'add_subject.dart';
 import 'subject_list_screen.dart'; // Add this import
+import '../services/friends_service.dart';
+import 'friends_search_screen.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -56,11 +58,13 @@ class _HomeState extends State<Home> {
         );
         break;
       case 'People':
-        // TODO: Navigate to people screen when ready
-        _show('People coming soon!');
-        break;
-      default:
-        _show('Unknown navigation: $label');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const FriendsSearchScreen(), // or FriendRequestsScreen
+    ),
+  );
+  break;
     }
   }
 
