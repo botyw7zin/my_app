@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friends_service.dart';
+import '../widgets/base_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -113,11 +114,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
         } else if (requestStatus == 'rejected') {
           label = 'Request again';
           enabled = true;
-          color = Colors.deepPurple;
+          color = const Color(0xFF7550FF);
         } else {
           label = 'Add friend';
           enabled = true;
-          color = Colors.deepPurple;
+          color = const Color(0xFF7550FF);
         }
 
         final loadingState = snapshot.connectionState == ConnectionState.waiting;
@@ -130,7 +131,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: const Color(0xFF7550FF),
               backgroundImage: (photoURL != null && photoURL.startsWith('http'))
                   ? NetworkImage(photoURL)
                   : null,
@@ -186,7 +187,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           return const Padding(
             padding: EdgeInsets.all(16),
             child: Center(
-              child: CircularProgressIndicator(color: Colors.deepPurple),
+              child: CircularProgressIndicator(color: Color(0xFF7550FF)),
             ),
           );
         }
@@ -219,7 +220,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: const CircleAvatar(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: Color(0xFF7550FF),
                   child: Icon(Icons.person, color: Colors.white),
                 ),
                 title: Text(
@@ -271,12 +272,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF2C2F3E),
-      appBar: AppBar(
-        title: const Text('Friends'),
-        backgroundColor: Colors.deepPurple,
-      ),
+    return BaseScreen(
+      title: 'Friends',
+      currentScreen: 'People',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -288,7 +286,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
               decoration: InputDecoration(
                 hintText: 'Search by username',
                 hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)),
                 filled: true,
                 fillColor: const Color(0xFF363A4D),
                 border: OutlineInputBorder(
@@ -319,7 +317,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(color: Colors.deepPurple),
+                child: CircularProgressIndicator(color: Color(0xFF7550FF)),
               ),
             const SizedBox(height: 8),
 
@@ -349,7 +347,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
               ),
 
             // Friends list
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Your friends',
