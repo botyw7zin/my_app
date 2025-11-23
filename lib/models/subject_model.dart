@@ -15,6 +15,7 @@ class Subject extends HiveObject {
   @HiveField(8) bool isSynced;
   @HiveField(9) bool isDeleted;
   @HiveField(10) String status; // "in progress", "done", "late"
+  @HiveField(11) int hoursCompleted; // NEW
 
   Subject({
     required this.id,
@@ -27,7 +28,8 @@ class Subject extends HiveObject {
     required this.updatedAt,
     this.isSynced = false,
     this.isDeleted = false,
-    this.status = 'in progress', // default
+    this.status = 'in progress',
+    this.hoursCompleted = 0, // NEW default
   });
 
   Map<String, dynamic> toJson() {
@@ -41,6 +43,7 @@ class Subject extends HiveObject {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'status': status,
+      'hoursCompleted': hoursCompleted, // NEW
     };
   }
 
@@ -54,9 +57,10 @@ class Subject extends HiveObject {
       hourGoal: json['hourGoal'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      isSynced: true, // Loaded from Firestore = synced
-      isDeleted: false, // Never pull deleted from remote
+      isSynced: true,
+      isDeleted: false,
       status: json['status'] ?? 'in progress',
+      hoursCompleted: json['hoursCompleted'] ?? 0, // NEW
     );
   }
 }

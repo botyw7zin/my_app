@@ -201,16 +201,16 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
 
 Future<void> _handleMarkAsDone(Subject subject) async {
   final isDone = subject.status.toLowerCase() == 'done';
-  
+
   try {
     if (isDone) {
-      // Reopen the subject - set hour goal back to a positive number if it's 0
-      final newHourGoal = subject.hourGoal <= 0 ? 1 : subject.hourGoal;
+      // Reopen: reset status and optionally progress
+      subject.hoursCompleted = 0; // or keep some progress if you prefer
       await _subjectService.updateSubject(
         subject,
-        hourGoal: newHourGoal,
+        // no hourGoal changes
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -229,12 +229,13 @@ Future<void> _handleMarkAsDone(Subject subject) async {
         );
       }
     } else {
-      // Mark as done - set hour goal to 0
+      // Mark as done: set progress to full goal
+      subject.hoursCompleted = subject.hourGoal;
       await _subjectService.updateSubject(
         subject,
-        hourGoal: 0,
+        // no hourGoal changes
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -265,7 +266,6 @@ Future<void> _handleMarkAsDone(Subject subject) async {
     }
   }
 }
-
 
   @override
   Widget build(BuildContext context) {

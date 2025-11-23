@@ -6,7 +6,7 @@ class SubjectCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onUpdate;
-  final VoidCallback? onMarkAsDone; // Add this
+  final VoidCallback? onMarkAsDone;
 
   const SubjectCard({
     super.key,
@@ -14,7 +14,7 @@ class SubjectCard extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onUpdate,
-    this.onMarkAsDone, // Add this
+    this.onMarkAsDone,
   });
 
   // Get icon and color based on type
@@ -72,9 +72,15 @@ class SubjectCard extends StatelessWidget {
     return '${deadline.day}/${deadline.month}/${deadline.year}';
   }
 
+  double _getProgress() {
+    if (subject.hourGoal <= 0) return 0;
+    final value = (subject.hoursCompleted / subject.hourGoal).clamp(0.0, 1.0);
+    return value.isNaN ? 0 : value;
+  }
+
   void _showActionMenu(BuildContext context) {
     final isDone = subject.status.toLowerCase() == 'done';
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF363A4D),
@@ -96,7 +102,7 @@ class SubjectCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Subject Title Header
             Container(
               padding: const EdgeInsets.all(12),
@@ -124,7 +130,7 @@ class SubjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Mark as Done / Undone Option
             if (!isDone)
               ListTile(
@@ -158,9 +164,9 @@ class SubjectCard extends StatelessWidget {
                   if (onMarkAsDone != null) onMarkAsDone!();
                 },
               ),
-            
+
             const Divider(color: Colors.white24),
-            
+
             // Update Option
             ListTile(
               leading: const Icon(Icons.edit, color: Colors.blue),
@@ -177,9 +183,9 @@ class SubjectCard extends StatelessWidget {
                 if (onUpdate != null) onUpdate!();
               },
             ),
-            
+
             const Divider(color: Colors.white24),
-            
+
             // Delete Option
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -196,9 +202,9 @@ class SubjectCard extends StatelessWidget {
                 if (onDelete != null) onDelete!();
               },
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             // Cancel Button
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -221,6 +227,9 @@ class SubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progress = _getProgress();
+    final progressPercent = (progress * 100).toStringAsFixed(0);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 4,
@@ -320,7 +329,7 @@ class SubjectCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Description
               Text(
                 subject.description,
@@ -333,7 +342,7 @@ class SubjectCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 16),
-              
+
               // Footer: Hour Goal and Deadline
               Row(
                 children: [
@@ -376,7 +385,7 @@ class SubjectCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  
+
                   // Deadline
                   Expanded(
                     child: Container(
@@ -418,7 +427,52 @@ class SubjectCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
+              const SizedBox(height: 12),
+
+              // Progress bar + text
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Progress',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        '${subject.hoursCompleted}/${subject.hourGoal} hrs  ($progressPercent%)',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: Colors.white12,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        subject.status.toLowerCase() == 'done'
+                            ? Colors.green
+                            : subject.status.toLowerCase() == 'late'
+                                ? Colors.red
+                                : Colors.deepPurple,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
               // Sync Status Indicator
               if (!subject.isSynced)
                 Padding(
