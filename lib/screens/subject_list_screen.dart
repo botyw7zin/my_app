@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/subject_model.dart';
 import '../services/subject_service.dart';
-import '../widgets/subject_card.dart';
 import '../widgets/nav_components.dart';
 import '../widgets/background.dart';
 import 'update_subject.dart';
@@ -18,6 +17,7 @@ class SubjectsListScreen extends StatefulWidget {
 class _SubjectsListScreenState extends State<SubjectsListScreen> {
   final SubjectService _subjectService = SubjectService();
   String _selectedFilter = 'all';
+  Set<String> _expandedSubjects = {}; // Track which subjects are expanded
 
   List<Subject> _filterSubjects(List<Subject> subjects) {
     switch (_selectedFilter) {
@@ -255,13 +255,380 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     }
   }
 
+  Color _getTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'study':
+        return const Color(0xFF7550FF);
+      case 'personal':
+        return const Color(0xFFFF6B6B);
+      default:
+        return Colors.blue;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'done':
+        return Colors.green;
+      case 'in progress':
+        return Colors.orange;
+      case 'late':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'done':
+        return '✓';
+      case 'in progress':
+        return '⏱';
+      case 'late':
+        return '⚠';
+      default:
+        return '•';
+    }
+  }
+
+  Widget _buildExpandableSubjectCard(Subject subject) {
+    final isExpanded = _expandedSubjects.contains(subject.id);
+    final progress = subject.hourGoal > 0
+        ? (subject.hoursCompleted / subject.hourGoal).clamp(0.0, 1.0)
+        : 0.0;
+    final progressPercent = (progress * 100).toInt();
+    final typeColor = _getTypeColor(subject.type);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: typeColor.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Main collapsed card content
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedSubjects.remove(subject.id);
+                } else {
+                  _expandedSubjects.add(subject.id);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Left icon/indicator
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: typeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      subject.type.toLowerCase() == 'study'
+                          ? Icons.school
+                          : Icons.person,
+                      color: typeColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // Title and type
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subject.name,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subject.type.toUpperCase(),
+                          style: TextStyle(
+                            color: typeColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Progress percentage badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: typeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$progressPercent%',
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  
+                  // Dropdown arrow
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 300),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.black54,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Expandable details section
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildExpandedContent(subject),
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandedContent(Subject subject) {
+    final typeColor = _getTypeColor(subject.type);
+    final statusColor = _getStatusColor(subject.status);
+    
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Progress bar
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Progress',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '${subject.hoursCompleted}/${subject.hourGoal} hours',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: subject.hourGoal > 0
+                      ? (subject.hoursCompleted / subject.hourGoal).clamp(0.0, 1.0)
+                      : 0.0,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(typeColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Description
+          Text(
+            'Description',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subject.description,
+            style: TextStyle(
+              color: Colors.grey.shade800,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Status and Deadline row
+          Row(
+            children: [
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: statusColor.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _getStatusIcon(subject.status),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      subject.status,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Deadline
+              if (subject.deadline != null)
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Due: ${subject.deadline!.day}/${subject.deadline!.month}/${subject.deadline!.year}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Action buttons
+          Row(
+            children: [
+              // Mark as Done / Reopen button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleMarkAsDone(subject),
+                  icon: Icon(
+                    subject.status.toLowerCase() == 'done'
+                        ? Icons.restart_alt
+                        : Icons.check_circle_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    subject.status.toLowerCase() == 'done'
+                        ? 'Reopen'
+                        : 'Mark Done',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: subject.status.toLowerCase() == 'done'
+                        ? Colors.orange
+                        : Colors.green,
+                    side: BorderSide(
+                      color: subject.status.toLowerCase() == 'done'
+                          ? Colors.orange
+                          : Colors.green,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              
+              // Update button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleUpdate(subject),
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Edit', style: TextStyle(fontSize: 13)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: typeColor,
+                    side: BorderSide(color: typeColor),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              
+              // Delete button
+              OutlinedButton(
+                onPressed: () => _handleDelete(subject),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  minimumSize: const Size(0, 0),
+                ),
+                child: const Icon(Icons.delete, size: 18),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       appBar: AppBar(
         title: const Text('My Subjects'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Color(0xFF7550FF),
         automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
@@ -286,10 +653,8 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
       ),
       body: Stack(
         children: [
-          // Add the reusable background
           const GlowyBackground(),
           
-          // Main content with ValueListenableBuilder
           ValueListenableBuilder<Box<Subject>>(
             valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
             builder: (context, box, widget) {
@@ -330,60 +695,61 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
 
               return Column(
                 children: [
-                  // Stats Header
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.deepPurple,
-                          Colors.deepPurple.shade700,
-                        ],
+                // Stats Header
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF7550FF),
+                        const Color(0xFF7550FF).withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF7550FF).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.deepPurple.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatItem(
-                          icon: Icons.bookmark,
-                          label: 'Total',
-                          value: allSubjects.length.toString(),
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                        _buildStatItem(
-                          icon: Icons.timer,
-                          label: 'Total Hours',
-                          value: '$totalHourGoal hrs',
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                        _buildStatItem(
-                          icon: Icons.check_circle,
-                          label: 'Done',
-                          value: allSubjects
-                              .where((s) => s.status == 'done')
-                              .length
-                              .toString(),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem(
+                        icon: Icons.bookmark,
+                        label: 'Total',
+                        value: allSubjects.length.toString(),
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      _buildStatItem(
+                        icon: Icons.timer,
+                        label: 'Total Hours',
+                        value: '$totalHourGoal hrs',
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      _buildStatItem(
+                        icon: Icons.check_circle,
+                        label: 'Done',
+                        value: allSubjects
+                            .where((s) => s.status == 'done')
+                            .length
+                            .toString(),
+                      ),
+                    ],
+                  ),
+                ),
+
 
                   // Filter Chip
                   if (_selectedFilter != 'all')
@@ -394,7 +760,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                           'Filter: ${_selectedFilter.toUpperCase()}',
                           style: const TextStyle(color: Colors.white),
                         ),
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: Color(0xFF7550FF),
                         deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
                         onDeleted: () {
                           setState(() {
@@ -404,7 +770,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                       ),
                     ),
 
-                  // Subjects List
+                  // Subjects List with expandable cardsr
                   Expanded(
                     child: filteredSubjects.isEmpty
                         ? Center(
@@ -421,20 +787,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                             itemCount: filteredSubjects.length,
                             itemBuilder: (context, index) {
                               final subject = filteredSubjects[index];
-                              return SubjectCard(
-                                subject: subject,
-                                onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Tapped: ${subject.name}'),
-                                      duration: const Duration(milliseconds: 500),
-                                    ),
-                                  );
-                                },
-                                onUpdate: () => _handleUpdate(subject),
-                                onDelete: () => _handleDelete(subject),
-                                onMarkAsDone: () => _handleMarkAsDone(subject),
-                              );
+                              return _buildExpandableSubjectCard(subject);
                             },
                           ),
                   ),
