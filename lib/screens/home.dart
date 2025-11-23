@@ -42,13 +42,16 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
-      title: 'Home',
+      title: '', // Empty title to hide it
       currentScreen: 'Home',
+      appBarColor: const Color(0xFF2C2F3E), // Same as background - makes it invisible
+      automaticallyImplyLeading: false, // Remove back button
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Hello! Username header with notification
             FutureBuilder<Map<String, dynamic>?>(
               future: _loadProfile(),
               builder: (context, snapshot) {
@@ -56,32 +59,59 @@ class _HomeState extends State<Home> {
                 final displayName = (data['displayName'] ?? '') as String;
                 final photoURL = data['photoURL'] as String?;
 
-                return InkWell(
-                  onTap: _openUserSettings,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: const Color(0xFF7550FF),
-                        backgroundImage: (photoURL != null &&
-                                photoURL.startsWith('http'))
-                            ? NetworkImage(photoURL)
-                            : const AssetImage('assets/images/cat.png')
-                                as ImageProvider,
+                return Row(
+                  children: [
+                    // Profile picture
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: const Color(0xFF7550FF),
+                      backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                          ? NetworkImage(photoURL)
+                          : const AssetImage('assets/images/cat.png') as ImageProvider,
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Hello! Username
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hello!',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          Text(
+                            displayName.isNotEmpty ? displayName : 'User',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        displayName.isNotEmpty ? displayName : 'User',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                    ),
+                    
+                    // Notification bell icon
+                    IconButton(
+                      icon: const Icon(Icons.notifications, color: Colors.white),
+                      iconSize: 28,
+                      tooltip: 'Friend Requests',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FriendRequestsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),
@@ -103,26 +133,15 @@ class _HomeState extends State<Home> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications),
-          tooltip: 'Friend Requests',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const FriendRequestsScreen(),
-              ),
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout),
+          icon: const Icon(Icons.logout, color: Colors.white),
           tooltip: 'Sign Out',
           onPressed: () async {
             final shouldLogout = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Sign Out'),
-                content: const Text('Are you sure you want to sign out?'),
+                backgroundColor: const Color(0xFF363A4D),
+                title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
+                content: const Text('Are you sure you want to sign out?', style: TextStyle(color: Colors.white70)),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),

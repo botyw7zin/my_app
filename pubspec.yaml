@@ -64,10 +64,27 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   fonts:
-    - family: Lexend Deca
+    - family: LexendDeca
       fonts:
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Thin.ttf
+          weight: 100
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-ExtraLight.ttf
+          weight: 200
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Light.ttf
+          weight: 300
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Regular.ttf
+          weight: 400
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Medium.ttf
+          weight: 500
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-SemiBold.ttf
+          weight: 600
         - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Bold.ttf
-  
+          weight: 700
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-ExtraBold.ttf
+          weight: 800
+        - asset: assets/images/fonts/Lexend_Deca/static/LexendDeca-Black.ttf
+          weight: 900
+
   assets:
     - assets/images/StudySync.png
     - assets/images/google_Logo.png

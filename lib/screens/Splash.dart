@@ -44,66 +44,76 @@ class _SplashPageState extends State<SplashPage> {
           
           // Main content
           SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Image.asset(
-                        'assets/images/StudySync.png',
-                        width: 268,
-                        height: 296,
-                      ),
-                    ],
+            child: Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 100), // Top spacing
+                  
+                  // Logo positioned high
+                  Image.asset(
+                    'assets/images/StudySync.png',
+                    width: 268,
+                    height: 296,
                   ),
-                ),
-                Spacer(flex: 1),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 48),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'StudySync',
-                        style: TextStyle(
-                          color: Color(0xFF00C8B3),
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                  
+                  const Spacer(), // Push content to bottom
+                  
+                  // Bottom content
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'StudySync',
+                          style: TextStyle(
+                            color: Color(0xFF00C8B3),
+                            fontSize: 36,
+                            fontFamily: 'LexendDeca',
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'This productive tool is designed to help you better manage your study time and be with friends while you do it!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontFamily: 'Lexend Deca',
+                        const SizedBox(height: 18),
+                        const Text(
+                          'This productive tool is designed to help\nyou better manage your study time\nand be with friends while you do it!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'Lexend Deca',
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _showButton
-                            ? CustomButton(
-                                text: 'LET\'S START',
-                                width: 200,
-                                height: 60,
-                                fontSize: 24,
-                                backgroundColor: Color(0xFF7550FF),
-                                onPressed: () {
-                                  Navigator.pushReplacementNamed(context, '/login');
-                                },
-                              )
-                            : const CircularProgressIndicator(
-                                color: Color(0xFF00C8B3),
-                              ),
-                      ),
-                    ],
+                        const SizedBox(height: 32),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _showButton
+                              ? CustomButton(
+                                  text: 'LET\'S START',
+                                  width: 331,
+                                  height: 52,
+                                  fontSize: 20,
+                                  backgroundColor: const Color(0xFF7550FF),
+                                  onPressed: () {
+                                    Navigator.pushReplacementNamed(context, '/login');
+                                  },
+                                )
+                              : const SizedBox(
+                                  width: 331,
+                                  height: 52,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00C8B3),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ],
