@@ -72,14 +72,20 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Subject created successfully!')),
+            const SnackBar(
+              content: Text('Subject created successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
           Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating subject: $e')),
+            SnackBar(
+              content: Text('Error creating subject: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -205,12 +211,18 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFE4E4),
+                                color: _selectedType == 'personal' 
+                                    ? const Color(0xFFFFE4E4) 
+                                    : const Color(0xFFE8E0FF),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
-                                Icons.person_outline,
-                                color: Color(0xFFFF6B6B),
+                              child: Icon(
+                                _selectedType == 'personal' 
+                                    ? Icons.person_outline 
+                                    : Icons.school_outlined,
+                                color: _selectedType == 'personal' 
+                                    ? const Color(0xFFFF6B6B) 
+                                    : const Color(0xFF7550FF),
                                 size: 24,
                               ),
                             ),
@@ -349,7 +361,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Deadline (White background now)
+                  // Deadline
                   InkWell(
                     onTap: _selectDeadline,
                     child: Column(

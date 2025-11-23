@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 import '../models/subject_model.dart';
 import '../services/subject_service.dart';
-import '../widgets/nav_components.dart';
-import '../widgets/background.dart';
+import '../widgets/base_screen.dart';
 import 'update_subject.dart';
-import 'add_subject.dart';
 
 class SubjectsListScreen extends StatefulWidget {
   const SubjectsListScreen({super.key});
@@ -17,7 +16,7 @@ class SubjectsListScreen extends StatefulWidget {
 class _SubjectsListScreenState extends State<SubjectsListScreen> {
   final SubjectService _subjectService = SubjectService();
   String _selectedFilter = 'all';
-  Set<String> _expandedSubjects = {}; // Track which subjects are expanded
+  Set<String> _expandedSubjects = {};
 
   List<Subject> _filterSubjects(List<Subject> subjects) {
     switch (_selectedFilter) {
@@ -31,40 +30,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
       default:
         return subjects;
     }
-  }
-
-  void _handleNavigation(String label) {
-    print('>>> [SubjectsListScreen] Navigation tapped: $label');
-    
-    switch (label) {
-      case 'Home':
-        Navigator.pop(context);
-        break;
-      case 'Calendar':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Calendar coming soon!')),
-        );
-        break;
-      case 'Documents':
-        // Already on documents, do nothing
-        break;
-      case 'People':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('People coming soon!')),
-        );
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unknown navigation: $label')),
-        );
-    }
-  }
-
-  void _navigateToAddSubject() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddSubjectScreen()),
-    );
   }
 
   Future<void> _handleUpdate(Subject subject) async {
@@ -315,7 +280,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
       ),
       child: Column(
         children: [
-          // Main collapsed card content
           InkWell(
             onTap: () {
               setState(() {
@@ -331,7 +295,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // Left icon/indicator
                   Container(
                     width: 48,
                     height: 48,
@@ -348,8 +311,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  
-                  // Title and type
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,25 +338,27 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                     ),
                   ),
                   
-                  // Progress percentage badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: typeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
+                  // Circular Progress Indicator
+                  CircularPercentIndicator(
+                    radius: 28.0,
+                    lineWidth: 5.0,
+                    percent: progress,
+                    center: Text(
                       '$progressPercent%',
                       style: TextStyle(
                         color: typeColor,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    progressColor: typeColor,
+                    backgroundColor: typeColor.withOpacity(0.2),
+                    circularStrokeCap: CircularStrokeCap.round,
+                    animation: true,
+                    animationDuration: 800,
                   ),
                   const SizedBox(width: 8),
                   
-                  // Dropdown arrow
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 300),
@@ -409,8 +372,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
               ),
             ),
           ),
-          
-          // Expandable details section
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: _buildExpandedContent(subject),
@@ -433,7 +394,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Progress bar
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -472,8 +432,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          
-          // Description
           Text(
             'Description',
             style: TextStyle(
@@ -492,11 +450,8 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
-          // Status and Deadline row
           Row(
             children: [
-              // Status badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -529,8 +484,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // Deadline
               if (subject.deadline != null)
                 Expanded(
                   child: Row(
@@ -554,11 +507,8 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          
-          // Action buttons
           Row(
             children: [
-              // Mark as Done / Reopen button
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _handleMarkAsDone(subject),
@@ -588,8 +538,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              
-              // Update button
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _handleUpdate(subject),
@@ -603,8 +551,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              
-              // Delete button
               OutlinedButton(
                 onPressed: () => _handleDelete(subject),
                 style: OutlinedButton.styleFrom(
@@ -624,182 +570,163 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF2C2F3E),
-      appBar: AppBar(
-        title: const Text('My Subjects'),
-        backgroundColor: Color(0xFF7550FF),
-        automaticallyImplyLeading: false,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
-            onSelected: (value) {
-              setState(() {
-                _selectedFilter = value;
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'all', child: Text('All Subjects')),
-              const PopupMenuDivider(),
-              const PopupMenuItem(value: 'study', child: Text('Study')),
-              const PopupMenuItem(value: 'personal', child: Text('Personal')),
-              const PopupMenuDivider(),
-              const PopupMenuItem(value: 'in progress', child: Text('In Progress')),
-              const PopupMenuItem(value: 'done', child: Text('Done')),
-              const PopupMenuItem(value: 'late', child: Text('Late')),
-            ],
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          const GlowyBackground(),
-          
-          ValueListenableBuilder<Box<Subject>>(
-            valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
-            builder: (context, box, widget) {
-              final allSubjects = _subjectService.getAllSubjects();
-              final filteredSubjects = _filterSubjects(allSubjects);
-              final totalHourGoal = _subjectService.getTotalHourGoal();
+    return BaseScreen(
+      title: 'My Subjects',
+      currentScreen: 'Documents',
+      body: ValueListenableBuilder<Box<Subject>>(
+        valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
+        builder: (context, box, widget) {
+          final allSubjects = _subjectService.getAllSubjects();
+          final filteredSubjects = _filterSubjects(allSubjects);
+          final totalHourGoal = _subjectService.getTotalHourGoal();
 
-              if (allSubjects.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.bookmark_border,
-                        size: 80,
-                        color: Colors.white.withOpacity(0.3),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No subjects yet',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap + to create your first subject',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return Column(
+          if (allSubjects.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                // Stats Header
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF7550FF),
-                        const Color(0xFF7550FF).withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF7550FF).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                  Icon(
+                    Icons.bookmark_border,
+                    size: 80,
+                    color: Colors.white.withOpacity(0.3),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem(
-                        icon: Icons.bookmark,
-                        label: 'Total',
-                        value: allSubjects.length.toString(),
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.white.withOpacity(0.3),
-                      ),
-                      _buildStatItem(
-                        icon: Icons.timer,
-                        label: 'Total Hours',
-                        value: '$totalHourGoal hrs',
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.white.withOpacity(0.3),
-                      ),
-                      _buildStatItem(
-                        icon: Icons.check_circle,
-                        label: 'Done',
-                        value: allSubjects
-                            .where((s) => s.status == 'done')
-                            .length
-                            .toString(),
-                      ),
-                    ],
-                  ),
-                ),
-
-
-                  // Filter Chip
-                  if (_selectedFilter != 'all')
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Chip(
-                        label: Text(
-                          'Filter: ${_selectedFilter.toUpperCase()}',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        backgroundColor: Color(0xFF7550FF),
-                        deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
-                        onDeleted: () {
-                          setState(() {
-                            _selectedFilter = 'all';
-                          });
-                        },
-                      ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No subjects yet',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 18,
                     ),
-
-                  // Subjects List with expandable cardsr
-                  Expanded(
-                    child: filteredSubjects.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No subjects match this filter',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                                fontSize: 16,
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 80),
-                            itemCount: filteredSubjects.length,
-                            itemBuilder: (context, index) {
-                              final subject = filteredSubjects[index];
-                              return _buildExpandableSubjectCard(subject);
-                            },
-                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap + to create your first subject',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.3),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
-              );
-            },
-          ),
-        ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF7550FF),
+                      const Color(0xFF7550FF).withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7550FF).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem(
+                      icon: Icons.bookmark,
+                      label: 'Total',
+                      value: allSubjects.length.toString(),
+                    ),
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                    _buildStatItem(
+                      icon: Icons.timer,
+                      label: 'Total Hours',
+                      value: '$totalHourGoal hrs',
+                    ),
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                    _buildStatItem(
+                      icon: Icons.check_circle,
+                      label: 'Done',
+                      value: allSubjects
+                          .where((s) => s.status == 'done')
+                          .length
+                          .toString(),
+                    ),
+                  ],
+                ),
+              ),
+              if (_selectedFilter != 'all')
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Chip(
+                    label: Text(
+                      'Filter: ${_selectedFilter.toUpperCase()}',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: const Color(0xFF7550FF),
+                    deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedFilter = 'all';
+                      });
+                    },
+                  ),
+                ),
+              Expanded(
+                child: filteredSubjects.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No subjects match this filter',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 16,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: filteredSubjects.length,
+                        itemBuilder: (context, index) {
+                          final subject = filteredSubjects[index];
+                          return _buildExpandableSubjectCard(subject);
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
-      floatingActionButton: NavComponents.buildFAB(_navigateToAddSubject),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: NavComponents.buildBottomBar(_handleNavigation),
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.filter_list),
+          onSelected: (value) {
+            setState(() {
+              _selectedFilter = value;
+            });
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'all', child: Text('All Subjects')),
+            const PopupMenuDivider(),
+            const PopupMenuItem(value: 'study', child: Text('Study')),
+            const PopupMenuItem(value: 'personal', child: Text('Personal')),
+            const PopupMenuDivider(),
+            const PopupMenuItem(value: 'in progress', child: Text('In Progress')),
+            const PopupMenuItem(value: 'done', child: Text('Done')),
+            const PopupMenuItem(value: 'late', child: Text('Late')),
+          ],
+        ),
+      ],
     );
   }
 
