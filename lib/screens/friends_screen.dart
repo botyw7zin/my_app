@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friends_service.dart';
@@ -180,106 +180,142 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 
   Widget _buildFriendsList() {
-  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-    stream: _friendService.friendsStream(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(
-            child: CircularProgressIndicator(color: Color(0xFF7550FF)),
-          ),
-        );
-      }
-
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'No friends yet',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-        );
-      }
-
-      final docs = snapshot.data!.docs;
-
-      return ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: docs.length,
-        itemBuilder: (context, index) {
-          final data = docs[index].data();
-          final friendUserId = data['friendUserId'] as String;
-          final friendDisplayName =
-              (data['friendDisplayName'] ?? '') as String;
-          final friendPhotoURL = data['friendPhotoURL'] as String?;
-
-          return Card(
-            color: const Color(0xFF363A4D),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _friendService.friendsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF7550FF)),
             ),
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: const Color(0xFF7550FF),
-                backgroundImage: (friendPhotoURL != null &&
-                        friendPhotoURL.startsWith('http'))
-                    ? NetworkImage(friendPhotoURL)
-                    : const AssetImage('assets/images/cat.png')
-                        as ImageProvider,
-              ),
-              title: Text(
-                friendDisplayName.isNotEmpty
-                    ? friendDisplayName
-                    : friendUserId,
-                style: const TextStyle(color: Colors.white),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.remove_circle, color: Colors.red),
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      backgroundColor: const Color(0xFF363A4D),
-                      title: const Text(
-                        'Remove Friend',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      content: Text(
-                        'Remove ${friendDisplayName.isNotEmpty ? friendDisplayName : friendUserId} from your friends?',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.pop(context, true),
-                          child: const Text(
-                            'Remove',
-                            style: TextStyle(color: Colors.red),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'No friends yet',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data();
+            final friendUserId = data['friendUserId'] as String;
+            final friendDisplayName = (data['friendDisplayName'] ?? '') as String;
+            final friendPhotoURL = data['friendPhotoURL'] as String?;
+
+            return InkWell(
+              onTap: () {
+                // Show options when tapped
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: const Color(0xFF363A4D),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (context) => Container(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFF7550FF),
+                            backgroundImage: (friendPhotoURL != null && friendPhotoURL.startsWith('http'))
+                                ? NetworkImage(friendPhotoURL)
+                                : const AssetImage('assets/images/cat.png') as ImageProvider,
                           ),
+                          title: Text(
+                            friendDisplayName.isNotEmpty ? friendDisplayName : friendUserId,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const Divider(color: Colors.white24),
+                        ListTile(
+                          leading: const Icon(Icons.remove_circle, color: Colors.red),
+                          title: const Text('Remove Friend', style: TextStyle(color: Colors.white)),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: const Color(0xFF363A4D),
+                                title: const Text(
+                                  'Remove Friend',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                content: Text(
+                                  'Remove ${friendDisplayName.isNotEmpty ? friendDisplayName : friendUserId} from your friends?',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text(
+                                      'Remove',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              await _friendService.removeFriend(friendUserId);
+                            }
+                          },
                         ),
                       ],
                     ),
-                  );
-                  if (confirm == true) {
-                    await _friendService.removeFriend(friendUserId);
-                  }
-                },
+                  ),
+                );
+              },
+              splashColor: const Color(0xFF7550FF).withOpacity(0.3),
+              highlightColor: const Color(0xFF7550FF).withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: const Color(0xFF7550FF),
+                      backgroundImage: (friendPhotoURL != null && friendPhotoURL.startsWith('http'))
+                          ? NetworkImage(friendPhotoURL)
+                          : const AssetImage('assets/images/cat.png') as ImageProvider,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        friendDisplayName.isNotEmpty ? friendDisplayName : friendUserId,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -290,23 +326,23 @@ class _FriendsScreenState extends State<FriendsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search bar
+            // Search bar with WHITE background and BLACK text
             TextField(
               controller: _searchController,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black), // BLACK text
               decoration: InputDecoration(
                 hintText: 'Search by username',
-                hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)),
+                hintStyle: const TextStyle(color: Colors.black45), // Dark gray hint
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)), // Purple icon
                 filled: true,
-                fillColor: const Color(0xFF363A4D),
+                fillColor: Colors.white, // WHITE background
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white54),
+                        icon: const Icon(Icons.clear, color: Colors.black54), // Black clear icon
                         onPressed: () {
                           setState(() {
                             _searchController.clear();
