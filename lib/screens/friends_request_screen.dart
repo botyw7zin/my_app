@@ -48,6 +48,9 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
               final data = doc.data();
               final requestId = doc.id;
               final fromUserId = data['fromUserId'] as String;
+              final fromDisplayName =
+                  (data['fromDisplayName'] ?? '') as String;
+              final fromPhotoURL = data['fromPhotoURL'] as String?;
 
               return Card(
                 color: const Color(0xFF363A4D),
@@ -56,17 +59,27 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                 ),
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Colors.deepPurple,
-                    child: Icon(Icons.person, color: Colors.white),
+                    backgroundImage: (fromPhotoURL != null &&
+                            fromPhotoURL.startsWith('http'))
+                        ? NetworkImage(fromPhotoURL)
+                        : null,
+                    child: (fromPhotoURL == null ||
+                            !fromPhotoURL.startsWith('http'))
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
                   ),
-                  title: const Text(
-                    'Friend request',
-                    style: TextStyle(color: Colors.white),
+                  title: Text(
+                    fromDisplayName.isNotEmpty
+                        ? fromDisplayName
+                        : 'Friend request',
+                    style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: Text(
-                    'From: $fromUserId',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    'From: ${fromDisplayName.isNotEmpty ? fromDisplayName : fromUserId}',
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

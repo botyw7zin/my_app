@@ -53,7 +53,6 @@ class FriendService {
     final profile = await _currentUserProfile();
     final fromDisplayName = profile?['displayName'] as String? ?? '';
     final fromPhotoURL = profile?['photoURL'] as String?;
-
     await _firestore
         .collection('users')
         .doc(toUserId)
