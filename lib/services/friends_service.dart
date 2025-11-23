@@ -15,6 +15,13 @@ class FriendService {
     return user.uid;
   }
 
+  /// ---------- HELPERS ----------
+
+  Future<Map<String, dynamic>?> _currentUserProfile() async {
+    final doc = await _firestore.collection('users').doc(_uid).get();
+    return doc.data();
+  }
+
   /// ---------- SEARCH ----------
 
   /// Search users by username prefix (displayName, case-insensitive via lowercaseDisplayName)
@@ -42,7 +49,10 @@ class FriendService {
       throw Exception("You can't add yourself");
     }
 
-    final now = DateTime.now();
+    // Load sender profile once to denormalize name + photo on the request
+    final profile = await _currentUserProfile();
+    final fromDisplayName = profile?['displayName'] as String? ?? '';
+    final fromPhotoURL = profile?['photoURL'] as String?;
 
     await _firestore
         .collection('users')
@@ -52,7 +62,9 @@ class FriendService {
       'fromUserId': fromUserId,
       'toUserId': toUserId,
       'status': 'pending',
-      'createdAt': now,
+      'createdAt': FieldValue.serverTimestamp(),
+      'fromDisplayName': fromDisplayName,
+      'fromPhotoURL': fromPhotoURL,
     });
   }
 
@@ -68,8 +80,10 @@ class FriendService {
         .collection('friendRequests')
         .doc(requestId);
 
+    // Mark request as accepted
     batch.update(reqRef, {'status': 'accepted'});
 
+    // Add both sides friendship
     final myFriendRef = _firestore
         .collection('users')
         .doc(toUserId)
