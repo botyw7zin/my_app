@@ -5,8 +5,8 @@ import '../widgets/background.dart';
 import '../services/auth_service.dart';
 import 'add_subject.dart';
 import 'subject_list_screen.dart';
-import '../services/friends_service.dart';
-import 'friends_search_screen.dart';
+import 'friends_screen.dart';
+import 'friends_request_screen.dart'; // <-- import your requests screen
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -39,10 +39,9 @@ class _HomeState extends State<Home> {
 
   void _handleNavigation(String label) {
     print('>>> [Home] Navigation tapped: $label');
-    
+
     switch (label) {
       case 'Home':
-        // Already on home, do nothing
         break;
       case 'Calendar':
         _show('Calendar coming soon!');
@@ -56,13 +55,13 @@ class _HomeState extends State<Home> {
         );
         break;
       case 'People':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const FriendsSearchScreen(), // or FriendRequestsScreen
-    ),
-  );
-  break;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const FriendsScreen(),
+          ),
+        );
+        break;
     }
   }
 
@@ -74,6 +73,20 @@ class _HomeState extends State<Home> {
         title: const Text('Home'),
         backgroundColor: Colors.deepPurple,
         actions: [
+          // Friend requests button
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            tooltip: 'Friend Requests',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FriendRequestsScreen(),
+                ),
+              );
+            },
+          ),
+          // Sign out button
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
@@ -108,10 +121,7 @@ class _HomeState extends State<Home> {
       ),
       body: Stack(
         children: [
-          // Add the reusable background
           const GlowyBackground(),
-          
-          // Main content
           const Center(
             child: Text(
               'test!',

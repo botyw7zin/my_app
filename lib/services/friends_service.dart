@@ -44,30 +44,6 @@ class FriendService {
 
     final now = DateTime.now();
 
-    // Already friends?
-    final existingFriend = await _firestore
-        .collection('users')
-        .doc(fromUserId)
-        .collection('friends')
-        .doc(toUserId)
-        .get();
-    if (existingFriend.exists) {
-      throw Exception('Already friends');
-    }
-
-    // Existing pending request?
-    final existingPending = await _firestore
-        .collection('users')
-        .doc(toUserId)
-        .collection('friendRequests')
-        .where('fromUserId', isEqualTo: fromUserId)
-        .where('status', isEqualTo: 'pending')
-        .limit(1)
-        .get();
-    if (existingPending.docs.isNotEmpty) {
-      throw Exception('Request already sent');
-    }
-
     await _firestore
         .collection('users')
         .doc(toUserId)
@@ -92,10 +68,8 @@ class FriendService {
         .collection('friendRequests')
         .doc(requestId);
 
-    // Mark request as accepted
     batch.update(reqRef, {'status': 'accepted'});
 
-    // Add both sides friendship
     final myFriendRef = _firestore
         .collection('users')
         .doc(toUserId)

@@ -27,36 +27,41 @@ class AuthService {
   /// Initialize services after successful authentication
   Future<void> _initializePostAuthServices(String userId) async {
     print('🔵 [_initializePostAuthServices] Initializing for user: $userId');
-    
+
     // Load user's subjects from Firebase
     await _subjectService.loadFromFirebase(userId);
-    
+
     // Start connectivity listener for foreground sync
     _subjectService.listenForConnectivityChanges();
-    
+
     print('✅ [_initializePostAuthServices] Services initialized');
   }
 
-  Future<User?> registerWithEmail(String email, String password, String username) async {
+  Future<User?> registerWithEmail(
+    String email,
+    String password,
+    String username,
+  ) async {
     try {
       print('🔵 [registerWithEmail] Registering user: $email');
       UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email, 
-        password: password
+        email: email,
+        password: password,
       );
       User? user = result.user;
 
       if (user != null) {
         final String defaultPhotoUrl = 'assets/cat.png';
-        
+
         // Create user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
           'email': email,
           'displayName': username,
+          'lowercaseDisplayName': username.toLowerCase(), // for search
           'photoURL': defaultPhotoUrl,
           'createdAt': FieldValue.serverTimestamp(),
         });
-        
+
         // Save to local Hive storage
         final userBox = Hive.box('userBox');
         await userBox.put('userId', user.uid);
@@ -65,7 +70,7 @@ class AuthService {
         await userBox.put('photoURL', defaultPhotoUrl);
 
         print('✅ [registerWithEmail] Registration successful for ${user.uid}');
-        
+
         // Initialize post-auth services
         await _initializePostAuthServices(user.uid);
       }
@@ -83,8 +88,8 @@ class AuthService {
     try {
       print('🔵 [signInWithEmail] Signing in: $email');
       UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email, 
-        password: password
+        email: email,
+        password: password,
       );
       User? user = result.user;
 
@@ -95,23 +100,40 @@ class AuthService {
 
         // Ensure user document has required fields
         if (!userDoc.exists || data == null || !data.containsKey('photoURL')) {
+          final displayName = user.displayName ?? 'User';
           await _firestore.collection('users').doc(user.uid).set({
             'email': user.email,
-            'displayName': user.displayName ?? 'User',
+            'displayName': displayName,
+            'lowercaseDisplayName': displayName.toLowerCase(),
             'photoURL': 'assets/cat.png',
             'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
           await userBox.put('photoURL', 'assets/cat.png');
+        } else if (!data.containsKey('lowercaseDisplayName')) {
+          // Backfill lowercaseDisplayName for old accounts
+          final displayName =
+              (data['displayName'] ?? user.displayName ?? 'User') as String;
+          await _firestore.collection('users').doc(user.uid).set({
+            'lowercaseDisplayName': displayName.toLowerCase(),
+          }, SetOptions(merge: true));
         }
+
+        final effectiveDisplayName =
+            data?['displayName'] ?? user.displayName ?? '';
 
         // Save to local Hive storage
         await userBox.put('userId', user.uid);
         await userBox.put('email', user.email);
-        await userBox.put('displayName', data?['displayName'] ?? user.displayName ?? '');
-        await userBox.put('photoURL', data?['photoURL'] ?? 'assets/cat.png');
+        await userBox.put('displayName', effectiveDisplayName);
+        await userBox.put(
+          'photoURL',
+          data?['photoURL'] ?? 'assets/cat.png',
+        );
 
         print('✅ [signInWithEmail] Signed in user: ${user.uid}');
-        
+        print(
+            '>>> [signInWithEmail] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
+
         // Initialize post-auth services (includes loadFromFirebase)
         await _initializePostAuthServices(user.uid);
       }
@@ -129,9 +151,10 @@ class AuthService {
     try {
       print('🔵 [signInWithGoogle] Starting Google Sign-In');
       await _ensureGoogleSignInInitialized();
-      
+
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {
@@ -143,19 +166,22 @@ class AuthService {
         idToken: idToken,
         accessToken: null,
       );
-      
-      UserCredential result = await _auth.signInWithCredential(credential);
+
+      UserCredential result =
+          await _auth.signInWithCredential(credential);
       User? user = result.user;
 
       if (user != null) {
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        final String displayName = user.displayName ?? googleUser.displayName ?? 'Google User';
-        final String googlePhotoUrl = user.photoURL ?? googleUser.photoUrl ?? 'assets/cat.png';
+        final String displayName =
+            user.displayName ?? googleUser.displayName ?? 'Google User';
+        final String googlePhotoUrl =
+            user.photoURL ?? googleUser.photoUrl ?? 'assets/cat.png';
 
         // Save/update user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
           'email': user.email,
           'displayName': displayName,
+          'lowercaseDisplayName': displayName.toLowerCase(),
           'photoURL': googlePhotoUrl,
           'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -168,17 +194,21 @@ class AuthService {
         await userBox.put('photoURL', googlePhotoUrl);
 
         print('✅ [signInWithGoogle] Signed in user: ${user.uid}');
-        
+        print(
+            '>>> [signInWithGoogle] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
+
         // Initialize post-auth services (includes loadFromFirebase)
         await _initializePostAuthServices(user.uid);
       }
 
       return user;
     } on GoogleSignInException catch (e) {
-      print('🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
+      print(
+          '🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
       return null;
     } on FirebaseAuthException catch (e) {
-      print('🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
+      print(
+          '🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [signInWithGoogle] Unexpected error: $e');
@@ -189,11 +219,11 @@ class AuthService {
   Future<void> signOut(BuildContext context) async {
     try {
       print('🔵 [signOut] Starting sign out process');
-      
+
       // Cancel all background sync tasks
       await _subjectService.cancelBackgroundSync();
       print('✅ [signOut] Background sync tasks cancelled');
-      
+
       // Sign out from Google and Firebase
       await _googleSignIn.signOut();
       await _auth.signOut();
@@ -225,7 +255,8 @@ class AuthService {
       await _auth.sendPasswordResetEmail(email: email);
       print('✅ [sendPasswordResetEmail] Password reset email sent');
     } on FirebaseAuthException catch (e) {
-      print('🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
+      print(
+          '🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [sendPasswordResetEmail] Unexpected error: $e');
@@ -234,11 +265,14 @@ class AuthService {
   }
 
   /// Change password for currently authenticated user
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     try {
       print('🔵 [changePassword] Attempting to change password');
       final user = _auth.currentUser;
-      
+
       if (user == null) {
         print('🔴 [changePassword] No user logged in');
         throw FirebaseAuthException(
@@ -252,7 +286,7 @@ class AuthService {
         email: user.email!,
         password: currentPassword,
       );
-      
+
       await user.reauthenticateWithCredential(credential);
       print('✅ [changePassword] User re-authenticated successfully');
 
@@ -260,7 +294,8 @@ class AuthService {
       await user.updatePassword(newPassword);
       print('✅ [changePassword] Password changed successfully');
     } on FirebaseAuthException catch (e) {
-      print('🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
+      print(
+          '🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [changePassword] Unexpected error: $e');
