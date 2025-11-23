@@ -3,9 +3,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/subject_model.dart';
 import '../services/subject_service.dart';
 import '../widgets/subject_card.dart';
-import '../widgets/nav_components.dart'; // Import your nav components
+import '../widgets/nav_components.dart';
+import '../widgets/background.dart';
 import 'update_subject.dart';
-import 'add_subject.dart'; // Import add subject screen
+import 'add_subject.dart';
 
 class SubjectsListScreen extends StatefulWidget {
   const SubjectsListScreen({super.key});
@@ -32,13 +33,11 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     }
   }
 
-  // Handle navigation from bottom nav
   void _handleNavigation(String label) {
     print('>>> [SubjectsListScreen] Navigation tapped: $label');
     
     switch (label) {
       case 'Home':
-        // Navigate back to home
         Navigator.pop(context);
         break;
       case 'Calendar':
@@ -61,7 +60,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     }
   }
 
-  // Navigate to add subject screen
   void _navigateToAddSubject() {
     Navigator.push(
       context,
@@ -69,7 +67,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     );
   }
 
-  // Handle update navigation
   Future<void> _handleUpdate(Subject subject) async {
     final result = await Navigator.push(
       context,
@@ -88,7 +85,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     }
   }
 
-  // Handle delete with confirmation
   Future<void> _handleDelete(Subject subject) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -199,73 +195,65 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     }
   }
 
-Future<void> _handleMarkAsDone(Subject subject) async {
-  final isDone = subject.status.toLowerCase() == 'done';
+  Future<void> _handleMarkAsDone(Subject subject) async {
+    final isDone = subject.status.toLowerCase() == 'done';
 
-  try {
-    if (isDone) {
-      // Reopen: reset status and optionally progress
-      subject.hoursCompleted = 0; // or keep some progress if you prefer
-      await _subjectService.updateSubject(
-        subject,
-        // no hourGoal changes
-      );
+    try {
+      if (isDone) {
+        subject.hoursCompleted = 0;
+        await _subjectService.updateSubject(subject);
 
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.restart_alt, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('"${subject.name}" marked as In Progress'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        subject.hoursCompleted = subject.hourGoal;
+        await _subjectService.updateSubject(subject);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('"${subject.name}" marked as Done! 🎉'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.restart_alt, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('"${subject.name}" marked as In Progress'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
+            content: Text('Error updating status: $e'),
+            backgroundColor: Colors.red.shade900,
           ),
         );
       }
-    } else {
-      // Mark as done: set progress to full goal
-      subject.hoursCompleted = subject.hourGoal;
-      await _subjectService.updateSubject(
-        subject,
-        // no hourGoal changes
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('"${subject.name}" marked as Done! 🎉'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating status: $e'),
-          backgroundColor: Colors.red.shade900,
-        ),
-      );
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +262,7 @@ Future<void> _handleMarkAsDone(Subject subject) async {
       appBar: AppBar(
         title: const Text('My Subjects'),
         backgroundColor: Colors.deepPurple,
-        automaticallyImplyLeading: false, // Remove back button since we have bottom nav
+        automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
@@ -296,159 +284,166 @@ Future<void> _handleMarkAsDone(Subject subject) async {
           ),
         ],
       ),
-      body: ValueListenableBuilder<Box<Subject>>(
-        valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
-        builder: (context, box, widget) {
-          final allSubjects = _subjectService.getAllSubjects();
-          final filteredSubjects = _filterSubjects(allSubjects);
-          final totalHourGoal = _subjectService.getTotalHourGoal();
+      body: Stack(
+        children: [
+          // Add the reusable background
+          const GlowyBackground(),
+          
+          // Main content with ValueListenableBuilder
+          ValueListenableBuilder<Box<Subject>>(
+            valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
+            builder: (context, box, widget) {
+              final allSubjects = _subjectService.getAllSubjects();
+              final filteredSubjects = _filterSubjects(allSubjects);
+              final totalHourGoal = _subjectService.getTotalHourGoal();
 
-          if (allSubjects.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bookmark_border,
-                    size: 80,
-                    color: Colors.white.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No subjects yet',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap + to create your first subject',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.3),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              // Stats Header
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.deepPurple,
-                      Colors.deepPurple.shade700,
+              if (allSubjects.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.bookmark_border,
+                        size: 80,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No subjects yet',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap + to create your first subject',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.3),
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem(
-                      icon: Icons.bookmark,
-                      label: 'Total',
-                      value: allSubjects.length.toString(),
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                    _buildStatItem(
-                      icon: Icons.timer,
-                      label: 'Total Hours',
-                      value: '$totalHourGoal hrs',
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                    _buildStatItem(
-                      icon: Icons.check_circle,
-                      label: 'Done',
-                      value: allSubjects
-                          .where((s) => s.status == 'done')
-                          .length
-                          .toString(),
-                    ),
-                  ],
-                ),
-              ),
+                );
+              }
 
-              // Filter Chip
-              if (_selectedFilter != 'all')
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Chip(
-                    label: Text(
-                      'Filter: ${_selectedFilter.toUpperCase()}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: Colors.deepPurple,
-                    deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
-                    onDeleted: () {
-                      setState(() {
-                        _selectedFilter = 'all';
-                      });
-                    },
-                  ),
-                ),
-
-              // Subjects List
-              Expanded(
-                child: filteredSubjects.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No subjects match this filter',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 16,
-                          ),
+              return Column(
+                children: [
+                  // Stats Header
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.deepPurple,
+                          Colors.deepPurple.shade700,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.deepPurple.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80), // Add padding for bottom nav
-                        itemCount: filteredSubjects.length,
-                        itemBuilder: (context, index) {
-                          final subject = filteredSubjects[index];
-                          return SubjectCard(
-                            subject: subject,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Tapped: ${subject.name}'),
-                                  duration: const Duration(milliseconds: 500),
-                                ),
-                              );
-                            },
-                            onUpdate: () => _handleUpdate(subject),
-                            onDelete: () => _handleDelete(subject),
-                            onMarkAsDone: () => _handleMarkAsDone(subject), // ← ADD THIS LINE
-                          );
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatItem(
+                          icon: Icons.bookmark,
+                          label: 'Total',
+                          value: allSubjects.length.toString(),
+                        ),
+                        Container(
+                          height: 40,
+                          width: 1,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                        _buildStatItem(
+                          icon: Icons.timer,
+                          label: 'Total Hours',
+                          value: '$totalHourGoal hrs',
+                        ),
+                        Container(
+                          height: 40,
+                          width: 1,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                        _buildStatItem(
+                          icon: Icons.check_circle,
+                          label: 'Done',
+                          value: allSubjects
+                              .where((s) => s.status == 'done')
+                              .length
+                              .toString(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Filter Chip
+                  if (_selectedFilter != 'all')
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Chip(
+                        label: Text(
+                          'Filter: ${_selectedFilter.toUpperCase()}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: Colors.deepPurple,
+                        deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedFilter = 'all';
+                          });
                         },
                       ),
-              ),
-            ],
-          );
-        },
+                    ),
+
+                  // Subjects List
+                  Expanded(
+                    child: filteredSubjects.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No subjects match this filter',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 16,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 80),
+                            itemCount: filteredSubjects.length,
+                            itemBuilder: (context, index) {
+                              final subject = filteredSubjects[index];
+                              return SubjectCard(
+                                subject: subject,
+                                onTap: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Tapped: ${subject.name}'),
+                                      duration: const Duration(milliseconds: 500),
+                                    ),
+                                  );
+                                },
+                                onUpdate: () => _handleUpdate(subject),
+                                onDelete: () => _handleDelete(subject),
+                                onMarkAsDone: () => _handleMarkAsDone(subject),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      // Add Bottom Navigation with FAB
       floatingActionButton: NavComponents.buildFAB(_navigateToAddSubject),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavComponents.buildBottomBar(_handleNavigation),

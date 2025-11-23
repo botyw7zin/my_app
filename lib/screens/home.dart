@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/nav_components.dart';
+import '../widgets/background.dart';
 import '../services/auth_service.dart';
 import 'add_subject.dart';
-import 'subject_list_screen.dart'; // Add this import
+import 'subject_list_screen.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -34,7 +35,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // Add this method to handle bottom navigation
   void _handleNavigation(String label) {
     print('>>> [Home] Navigation tapped: $label');
     
@@ -43,11 +43,9 @@ class _HomeState extends State<Home> {
         // Already on home, do nothing
         break;
       case 'Calendar':
-        // TODO: Navigate to calendar screen when ready
         _show('Calendar coming soon!');
         break;
       case 'Documents':
-        // Navigate to Subjects List Screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -56,7 +54,6 @@ class _HomeState extends State<Home> {
         );
         break;
       case 'People':
-        // TODO: Navigate to people screen when ready
         _show('People coming soon!');
         break;
       default:
@@ -104,19 +101,27 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: const Center(
-        child: Text(
-          'test!',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Add the reusable background
+          const GlowyBackground(),
+          
+          // Main content
+          const Center(
+            child: Text(
+              'test!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: NavComponents.buildFAB(_navigateToAddSubject),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: NavComponents.buildBottomBar(_handleNavigation), // Changed from _show to _handleNavigation
+      bottomNavigationBar: NavComponents.buildBottomBar(_handleNavigation),
     );
   }
 }
