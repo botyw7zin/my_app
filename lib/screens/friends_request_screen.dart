@@ -64,11 +64,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                     backgroundImage: (fromPhotoURL != null &&
                             fromPhotoURL.startsWith('http'))
                         ? NetworkImage(fromPhotoURL)
-                        : null,
-                    child: (fromPhotoURL == null ||
-                            !fromPhotoURL.startsWith('http'))
-                        ? const Icon(Icons.person, color: Colors.white)
-                        : null,
+                        : const AssetImage('assets/images/cat.png')
+                            as ImageProvider,
                   ),
                   title: Text(
                     fromDisplayName.isNotEmpty
@@ -78,8 +75,10 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                   ),
                   subtitle: Text(
                     'From: ${fromDisplayName.isNotEmpty ? fromDisplayName : fromUserId}',
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

@@ -60,7 +60,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   Future<void> _sendRequest(String userId) async {
     try {
-      print('>>> _sendRequest to: $userId, auth uid: ${FirebaseAuth.instance.currentUser?.uid}');
+      print(
+          '>>> _sendRequest to: $userId, auth uid: ${FirebaseAuth.instance.currentUser?.uid}');
       await _friendService.sendFriendRequest(userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +84,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
   }
 
-  Widget _buildSearchResultTile(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget _buildSearchResultTile(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     final userId = doc.id;
     final username = (data['displayName'] ?? '') as String;
@@ -97,7 +99,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
       ]),
       builder: (context, snapshot) {
         final isFriend = snapshot.hasData ? snapshot.data![0] as bool : false;
-        final requestStatus = snapshot.hasData ? snapshot.data![1] as String? : null;
+        final requestStatus =
+            snapshot.hasData ? snapshot.data![1] as String? : null;
 
         String label;
         bool enabled;
@@ -121,7 +124,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
           color = const Color(0xFF7550FF);
         }
 
-        final loadingState = snapshot.connectionState == ConnectionState.waiting;
+        final loadingState =
+            snapshot.connectionState == ConnectionState.waiting;
 
         return Card(
           color: const Color(0xFF363A4D),
@@ -132,12 +136,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF7550FF),
-              backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+              backgroundImage: (photoURL != null &&
+                      photoURL.startsWith('http'))
                   ? NetworkImage(photoURL)
-                  : null,
-              child: (photoURL == null || !photoURL.startsWith('http'))
-                  ? const Icon(Icons.person, color: Colors.white)
-                  : null,
+                  : const AssetImage('assets/images/cat.png')
+                      as ImageProvider,
             ),
             title: Text(
               username.isNotEmpty ? username : userId,
@@ -146,15 +149,18 @@ class _FriendsScreenState extends State<FriendsScreen> {
             subtitle: email != null
                 ? Text(
                     email,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12),
                   )
                 : null,
             trailing: ElevatedButton(
-              onPressed: enabled && !loadingState ? () => _sendRequest(userId) : null,
+              onPressed:
+                  enabled && !loadingState ? () => _sendRequest(userId) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -240,15 +246,18 @@ class _FriendsScreenState extends State<FriendsScreen> {
                         ),
                         content: Text(
                           'Remove $friendUserId from your friends?',
-                          style: const TextStyle(color: Colors.white70),
+                          style:
+                              const TextStyle(color: Colors.white70),
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context, false),
+                            onPressed: () =>
+                                Navigator.pop(context, false),
                             child: const Text('Cancel'),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.pop(context, true),
+                            onPressed: () =>
+                                Navigator.pop(context, true),
                             child: const Text(
                               'Remove',
                               style: TextStyle(color: Colors.red),
@@ -279,14 +288,14 @@ class _FriendsScreenState extends State<FriendsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search bar
             TextField(
               controller: _searchController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search by username',
                 hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)),
+                prefixIcon:
+                    const Icon(Icons.search, color: Color(0xFF7550FF)),
                 filled: true,
                 fillColor: const Color(0xFF363A4D),
                 border: OutlineInputBorder(
@@ -295,7 +304,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white54),
+                        icon: const Icon(Icons.clear,
+                            color: Colors.white54),
                         onPressed: () {
                           setState(() {
                             _searchController.clear();
@@ -312,16 +322,17 @@ class _FriendsScreenState extends State<FriendsScreen> {
             if (_error.isNotEmpty)
               Text(
                 _error,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                style: const TextStyle(
+                    color: Colors.redAccent, fontSize: 12),
               ),
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(color: Color(0xFF7550FF)),
+                child: CircularProgressIndicator(
+                    color: Color(0xFF7550FF)),
               ),
             const SizedBox(height: 8),
 
-            // Search results (if any)
             if (_results.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +348,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   const SizedBox(height: 8),
                   ListView.builder(
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics:
+                        const NeverScrollableScrollPhysics(),
                     itemCount: _results.length,
                     itemBuilder: (context, index) =>
                         _buildSearchResultTile(_results[index]),
@@ -346,7 +358,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 ],
               ),
 
-            // Friends list
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
