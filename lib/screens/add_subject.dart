@@ -163,6 +163,17 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Add Project Title
+              const Text(
+                'Add Project',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Type Dropdown
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +181,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                   const Text(
                     'type',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Colors.white,
                       fontSize: 14,
                     ),
                   ),
@@ -271,7 +282,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                   const Text(
                     'objective',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Colors.white,
                       fontSize: 14,
                     ),
                   ),
@@ -331,7 +342,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Deadline (Optional)
+              // Deadline (White background now)
               InkWell(
                 onTap: _selectDeadline,
                 child: Column(
@@ -340,7 +351,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                     const Text(
                       'deadline',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontSize: 14,
                       ),
                     ),
@@ -348,16 +359,15 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white, // Now white instead of transparent
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7550FF).withOpacity(0.2),
+                              color: const Color(0xFFE8E0FF),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
@@ -374,8 +384,8 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
                                   : '${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}',
                               style: TextStyle(
                                 color: _selectedDeadline == null 
-                                    ? Colors.white54 
-                                    : Colors.white,
+                                    ? Colors.black54 
+                                    : Colors.black,
                                 fontSize: 16,
                               ),
                             ),
