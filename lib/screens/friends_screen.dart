@@ -180,95 +180,106 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 
   Widget _buildFriendsList() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _friendService.friendsStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(
-              child: CircularProgressIndicator(color: Color(0xFF7550FF)),
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'No friends yet',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-          );
-        }
-
-        final docs = snapshot.data!.docs;
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data();
-            final friendUserId = data['friendUserId'] as String;
-
-            return Card(
-              color: const Color(0xFF363A4D),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF7550FF),
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                title: Text(
-                  friendUserId,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF363A4D),
-                        title: const Text(
-                          'Remove Friend',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        content: Text(
-                          'Remove $friendUserId from your friends?',
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text(
-                              'Remove',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await _friendService.removeFriend(friendUserId);
-                    }
-                  },
-                ),
-              ),
-            );
-          },
+  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+    stream: _friendService.friendsStream(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(
+            child: CircularProgressIndicator(color: Color(0xFF7550FF)),
+          ),
         );
-      },
-    );
-  }
+      }
+
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'No friends yet',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+        );
+      }
+
+      final docs = snapshot.data!.docs;
+
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: docs.length,
+        itemBuilder: (context, index) {
+          final data = docs[index].data();
+          final friendUserId = data['friendUserId'] as String;
+          final friendDisplayName =
+              (data['friendDisplayName'] ?? '') as String;
+          final friendPhotoURL = data['friendPhotoURL'] as String?;
+
+          return Card(
+            color: const Color(0xFF363A4D),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: const Color(0xFF7550FF),
+                backgroundImage: (friendPhotoURL != null &&
+                        friendPhotoURL.startsWith('http'))
+                    ? NetworkImage(friendPhotoURL)
+                    : const AssetImage('assets/images/cat.png')
+                        as ImageProvider,
+              ),
+              title: Text(
+                friendDisplayName.isNotEmpty
+                    ? friendDisplayName
+                    : friendUserId,
+                style: const TextStyle(color: Colors.white),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.remove_circle, color: Colors.red),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: const Color(0xFF363A4D),
+                      title: const Text(
+                        'Remove Friend',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      content: Text(
+                        'Remove ${friendDisplayName.isNotEmpty ? friendDisplayName : friendUserId} from your friends?',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context, true),
+                          child: const Text(
+                            'Remove',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    await _friendService.removeFriend(friendUserId);
+                  }
+                },
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
