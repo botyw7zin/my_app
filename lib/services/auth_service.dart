@@ -6,13 +6,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_app/services/subject_service.dart';
 import 'package:my_app/screens/Splash.dart';
 
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SubjectService _subjectService = SubjectService();
 
+
   bool _isGoogleSignInInitialized = false;
+
 
   Future<void> _ensureGoogleSignInInitialized() async {
     if (!_isGoogleSignInInitialized) {
@@ -21,21 +24,33 @@ class AuthService {
     }
   }
 
+
   User? getCurrentUser() => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
 
   /// Initialize services after successful authentication
   Future<void> _initializePostAuthServices(String userId) async {
     print('🔵 [_initializePostAuthServices] Initializing for user: $userId');
 
-    // Load user's subjects from Firebase
+
+    // Load user's subjects from Firebase (merges remote data into local Hive)
     await _subjectService.loadFromFirebase(userId);
+
 
     // Start connectivity listener for foreground sync
     _subjectService.listenForConnectivityChanges();
 
+
+    // Trigger immediate sync to push any local changes made while offline
+    // (e.g., if user created subjects offline then logged in)
+    await _subjectService.syncToFirebase();
+    print('✅ [_initializePostAuthServices] Initial sync completed');
+
+
     print('✅ [_initializePostAuthServices] Services initialized');
   }
+
 
   Future<User?> registerWithEmail(
     String email,
@@ -50,8 +65,10 @@ class AuthService {
       );
       User? user = result.user;
 
+
       if (user != null) {
         final String defaultPhotoUrl = 'assets/images/cat.png';
+
 
         // Create user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
@@ -62,6 +79,7 @@ class AuthService {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+
         // Save to local Hive storage
         final userBox = Hive.box('userBox');
         await userBox.put('userId', user.uid);
@@ -69,7 +87,9 @@ class AuthService {
         await userBox.put('displayName', username);
         await userBox.put('photoURL', defaultPhotoUrl);
 
+
         print('✅ [registerWithEmail] Registration successful for ${user.uid}');
+
 
         // Initialize post-auth services
         await _initializePostAuthServices(user.uid);
@@ -84,6 +104,7 @@ class AuthService {
     }
   }
 
+
   Future<User?> signInWithEmail(String email, String password) async {
     try {
       print('🔵 [signInWithEmail] Signing in: $email');
@@ -93,10 +114,12 @@ class AuthService {
       );
       User? user = result.user;
 
+
       if (user != null) {
         final userDoc = await _firestore.collection('users').doc(user.uid).get();
         final data = userDoc.data();
         final userBox = Hive.box('userBox');
+
 
         // Ensure user document has required fields
         if (!userDoc.exists || data == null || !data.containsKey('photoURL')) {
@@ -118,8 +141,10 @@ class AuthService {
           }, SetOptions(merge: true));
         }
 
+
         final effectiveDisplayName =
             data?['displayName'] ?? user.displayName ?? '';
+
 
         // Save to local Hive storage
         await userBox.put('userId', user.uid);
@@ -130,9 +155,11 @@ class AuthService {
           data?['photoURL'] ?? 'assets/images/cat.png',
         );
 
+
         print('✅ [signInWithEmail] Signed in user: ${user.uid}');
         print(
             '>>> [signInWithEmail] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
+
 
         // Initialize post-auth services (includes loadFromFirebase)
         await _initializePostAuthServices(user.uid);
@@ -147,35 +174,42 @@ class AuthService {
     }
   }
 
+
   Future<User?> signInWithGoogle() async {
     try {
       print('🔵 [signInWithGoogle] Starting Google Sign-In');
       await _ensureGoogleSignInInitialized();
+
 
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
+
       if (idToken == null) {
         print('🔴 [signInWithGoogle] Failed to get ID token');
         return null;
       }
+
 
       final credential = GoogleAuthProvider.credential(
         idToken: idToken,
         accessToken: null,
       );
 
+
       UserCredential result =
           await _auth.signInWithCredential(credential);
       User? user = result.user;
+
 
       if (user != null) {
         final String displayName =
             user.displayName ?? googleUser.displayName ?? 'Google User';
         final String googlePhotoUrl =
             user.photoURL ?? googleUser.photoUrl ?? 'assets/images/cat.png';
+
 
         // Save/update user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
@@ -186,6 +220,7 @@ class AuthService {
           'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
+
         // Save to local Hive storage
         final userBox = Hive.box('userBox');
         await userBox.put('userId', user.uid);
@@ -193,13 +228,16 @@ class AuthService {
         await userBox.put('displayName', displayName);
         await userBox.put('photoURL', googlePhotoUrl);
 
+
         print('✅ [signInWithGoogle] Signed in user: ${user.uid}');
         print(
             '>>> [signInWithGoogle] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
 
+
         // Initialize post-auth services (includes loadFromFirebase)
         await _initializePostAuthServices(user.uid);
       }
+
 
       return user;
     } on GoogleSignInException catch (e) {
@@ -216,24 +254,30 @@ class AuthService {
     }
   }
 
+
   Future<void> signOut(BuildContext context) async {
     try {
       print('🔵 [signOut] Starting sign out process');
+
 
       // Cancel all background sync tasks
       await _subjectService.cancelBackgroundSync();
       print('✅ [signOut] Background sync tasks cancelled');
 
+
       // Sign out from Google and Firebase
       await _googleSignIn.signOut();
       await _auth.signOut();
+
 
       // Clear local storage
       final userBox = Hive.box('userBox');
       await userBox.clear();
       await _subjectService.clearLocalData();
 
+
       print('✅ [signOut] Signed out, cache cleared.');
+
 
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
@@ -247,6 +291,7 @@ class AuthService {
       rethrow;
     }
   }
+
 
   /// Send password reset email to user
   Future<void> sendPasswordResetEmail(String email) async {
@@ -264,6 +309,7 @@ class AuthService {
     }
   }
 
+
   /// Change password for currently authenticated user
   Future<void> changePassword(
     String currentPassword,
@@ -273,6 +319,7 @@ class AuthService {
       print('🔵 [changePassword] Attempting to change password');
       final user = _auth.currentUser;
 
+
       if (user == null) {
         print('🔴 [changePassword] No user logged in');
         throw FirebaseAuthException(
@@ -281,14 +328,17 @@ class AuthService {
         );
       }
 
+
       // Re-authenticate user with current password
       final credential = EmailAuthProvider.credential(
         email: user.email!,
         password: currentPassword,
       );
 
+
       await user.reauthenticateWithCredential(credential);
       print('✅ [changePassword] User re-authenticated successfully');
+
 
       // Update password
       await user.updatePassword(newPassword);
