@@ -38,7 +38,7 @@ class AuthService {
     await _subjectService.loadFromFirebase(userId);
 
 
-    // Start connectivity listener for foreground sync
+    // 3) Start connectivity listener for future changes
     _subjectService.listenForConnectivityChanges();
 
 
@@ -70,11 +70,10 @@ class AuthService {
         final String defaultPhotoUrl = 'assets/images/cat.png';
 
 
-        // Create user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
           'email': email,
           'displayName': username,
-          'lowercaseDisplayName': username.toLowerCase(), // for search
+          'lowercaseDisplayName': username.toLowerCase(),
           'photoURL': defaultPhotoUrl,
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -133,7 +132,6 @@ class AuthService {
           }, SetOptions(merge: true));
           await userBox.put('photoURL', 'assets/images/cat.png');
         } else if (!data.containsKey('lowercaseDisplayName')) {
-          // Backfill lowercaseDisplayName for old accounts
           final displayName =
               (data['displayName'] ?? user.displayName ?? 'User') as String;
           await _firestore.collection('users').doc(user.uid).set({
@@ -241,12 +239,10 @@ class AuthService {
 
       return user;
     } on GoogleSignInException catch (e) {
-      print(
-          '🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
+      print('🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
       return null;
     } on FirebaseAuthException catch (e) {
-      print(
-          '🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
+      print('🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [signInWithGoogle] Unexpected error: $e');
@@ -293,15 +289,14 @@ class AuthService {
   }
 
 
-  /// Send password reset email to user
+
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       print('🔵 [sendPasswordResetEmail] Sending reset email to: $email');
       await _auth.sendPasswordResetEmail(email: email);
       print('✅ [sendPasswordResetEmail] Password reset email sent');
     } on FirebaseAuthException catch (e) {
-      print(
-          '🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
+      print('🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [sendPasswordResetEmail] Unexpected error: $e');
@@ -344,8 +339,7 @@ class AuthService {
       await user.updatePassword(newPassword);
       print('✅ [changePassword] Password changed successfully');
     } on FirebaseAuthException catch (e) {
-      print(
-          '🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
+      print('🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       print('🔴 [changePassword] Unexpected error: $e');

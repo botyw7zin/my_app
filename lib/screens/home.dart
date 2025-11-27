@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import '../widgets/base_screen.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
@@ -14,7 +15,6 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _show(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -28,13 +28,6 @@ class _HomeState extends State<Home> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return null;
-    final doc = await _firestore.collection('users').doc(uid).get();
-    return doc.data();
-  }
-
   void _openUserSettings() {
     _show('Settings coming soon');
   }
@@ -42,22 +35,22 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
-      title: '', // Empty title to hide it
+      title: '',
       currentScreen: 'Home',
-      appBarColor: const Color(0xFF2C2F3E), // Same as background - makes it invisible
-      automaticallyImplyLeading: false, // Remove back button
+      appBarColor: const Color(0xFF2C2F3E),
+      automaticallyImplyLeading: false,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hello! Username header with notification
-            FutureBuilder<Map<String, dynamic>?>(
-              future: _loadProfile(),
-              builder: (context, snapshot) {
-                final data = snapshot.data ?? {};
-                final displayName = (data['displayName'] ?? '') as String;
-                final photoURL = data['photoURL'] as String?;
+            // Hello! Username header with notification (reacts to Hive changes)
+            ValueListenableBuilder(
+              valueListenable: Hive.box('userBox').listenable(),
+              builder: (context, Box box, _) {
+                final displayName = (box.get('displayName') ?? '') as String;
+                final photoURL =
+                    (box.get('photoURL') ?? 'assets/images/cat.png') as String;
 
                 return Row(
                   children: [
@@ -65,12 +58,13 @@ class _HomeState extends State<Home> {
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: const Color(0xFF7550FF),
-                      backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                      backgroundImage: (photoURL.startsWith('http'))
                           ? NetworkImage(photoURL)
-                          : const AssetImage('assets/images/cat.png') as ImageProvider,
+                          : const AssetImage('assets/images/cat.png')
+                              as ImageProvider,
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Hello! Username
                     Expanded(
                       child: Column(
@@ -96,7 +90,7 @@ class _HomeState extends State<Home> {
                         ],
                       ),
                     ),
-                    
+
                     // Notification bell icon
                     IconButton(
                       icon: const Icon(Icons.notifications, color: Colors.white),
@@ -140,8 +134,12 @@ class _HomeState extends State<Home> {
               context: context,
               builder: (context) => AlertDialog(
                 backgroundColor: const Color(0xFF363A4D),
-                title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-                content: const Text('Are you sure you want to sign out?', style: TextStyle(color: Colors.white70)),
+                title:
+                    const Text('Sign Out', style: TextStyle(color: Colors.white)),
+                content: const Text(
+                  'Are you sure you want to sign out?',
+                  style: TextStyle(color: Colors.white70),
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
