@@ -1,4 +1,4 @@
-import 'dart:async';  // ✅ ADD THIS IMPORT
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
@@ -41,17 +41,15 @@ class SubjectService {
   factory SubjectService() => _instance;
   SubjectService._internal();
 
-
   final _firestore = FirebaseFirestore.instance;
-  bool _connectivityListening = false;
-
+  
+  // ✅ ADD THIS LINE - Track connectivity subscription
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   static const String _syncTaskName = 'subject-sync-task';
   static const String _periodicSyncTaskName = 'periodic-subject-sync';
 
-
   // ------- Pure Local CRUD Operations (No Connectivity Checks) -------
-
 
   Future<void> createSubject({
     required String name,
@@ -79,7 +77,6 @@ class SubjectService {
     await subjectBox.put(subjectId, subject);
     print('>>> [createSubject] Created subject in Hive: $subjectId - $name');
   }
-
 
   Future<void> updateSubject(
     Subject subject, {
@@ -113,14 +110,12 @@ class SubjectService {
     print('>>> [updateSubject] Updated subject in Hive: ${subject.id} - ${subject.name}');
   }
 
-
   Future<void> deleteSubject(Subject subject) async {
     subject.isDeleted = true;
     subject.isSynced = false;
     await subject.save();
     print('>>> [deleteSubject] Marked for deletion in Hive: ${subject.id} - ${subject.name}');
   }
-
 
   Future<void> addStudyHours(Subject subject, int deltaHours) async {
     final now = DateTime.now();
@@ -143,9 +138,7 @@ class SubjectService {
     print('>>> [addStudyHours] Updated hours in Hive: ${subject.id} - ${subject.hoursCompleted}/${subject.hourGoal}');
   }
 
-
   // ------- Centralized Sync Logic -------
-
 
   Future<void> syncToFirebase() async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
@@ -213,9 +206,7 @@ class SubjectService {
     print('>>> [syncToFirebase] Sync completed');
   }
 
-
   // ------- WorkManager Integration -------
-
 
   /// Initialize WorkManager - call once in main() after Firebase init
   Future<void> initializeWorkManager() async {
@@ -227,7 +218,6 @@ class SubjectService {
 
     await _registerPeriodicSync();
   }
-
 
   Future<void> _registerPeriodicSync() async {
     await Workmanager().registerPeriodicTask(
@@ -243,14 +233,17 @@ class SubjectService {
     print('>>> [_registerPeriodicSync] Registered periodic sync task');
   }
 
-
   /// Cancel all background sync tasks
   Future<void> cancelBackgroundSync() async {
     await Workmanager().cancelByUniqueName(_syncTaskName);
     await Workmanager().cancelByUniqueName(_periodicSyncTaskName);
-    print('>>> [cancelBackgroundSync] Cancelled all sync tasks');
+    
+    // Also cancel connectivity listener
+    await _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    
+    print('>>> [cancelBackgroundSync] Cancelled all sync tasks and listeners');
   }
-
 
   /// Call this ONCE per session after login - triggers sync when coming online
   void listenForConnectivityChanges() {
@@ -274,23 +267,19 @@ class SubjectService {
     });
   }
 
-
   /// Manual sync trigger (e.g., pull-to-refresh or "Sync Now" button)
   Future<void> manualSync() async {
     print('>>> [manualSync] User triggered manual sync');
     await syncToFirebase();
   }
 
-
   // ------- Data Management -------
-
 
   Future<void> clearLocalData() async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
     await subjectBox.clear();
     print('>>> [clearLocalData] Local subjects cleared');
   }
-
 
   Future<void> loadFromFirebase(String userId) async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
@@ -313,7 +302,6 @@ class SubjectService {
     }
   }
 
-
   /// Get all subjects (non-deleted) from Hive
   List<Subject> getAllSubjects() {
     final subjectBox = Hive.box<Subject>('subjectsBox');
@@ -323,14 +311,12 @@ class SubjectService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Most recent first
   }
 
-
   /// Get subjects by type
   List<Subject> getSubjectsByType(String type) {
     return getAllSubjects()
         .where((subject) => subject.type == type)
         .toList();
   }
-
 
   /// Get subjects by status
   List<Subject> getSubjectsByStatus(String status) {
@@ -339,16 +325,13 @@ class SubjectService {
         .toList();
   }
 
-
   /// Calculate total hour goal across all subjects
   int getTotalHourGoal() {
     return getAllSubjects()
         .fold(0, (sum, subject) => sum + subject.hourGoal);
   }
 
-
   // ------- Background Sync (Called by WorkManager) -------
-
 
   /// For Workmanager/background sync - runs in separate isolate
   static Future<void> backgroundSyncToFirebase() async {
