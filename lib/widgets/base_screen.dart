@@ -5,14 +5,15 @@ import '../screens/home.dart';
 import '../screens/subject_list_screen.dart';
 import '../screens/add_subject.dart';
 import '../screens/friends_screen.dart';
+import '../screens/calendar_screen.dart';
 
 class BaseScreen extends StatelessWidget {
   final String title;
   final Widget body;
   final List<Widget>? actions;
   final Color? appBarColor;
-  final String currentScreen; // Track which screen is active ('Home', 'Documents', 'People')
-  final bool automaticallyImplyLeading; // For back button control
+  final String currentScreen; // 'Home', 'Documents', 'People', 'Calendar'
+  final bool automaticallyImplyLeading;
 
   const BaseScreen({
     super.key,
@@ -34,7 +35,6 @@ class BaseScreen extends StatelessWidget {
   void _handleNavigation(BuildContext context, String label) {
     print('>>> [BaseScreen] Navigation tapped: $label from $currentScreen');
 
-    // Don't navigate if already on that screen
     if (label == currentScreen) {
       print('>>> [BaseScreen] Already on $label screen, ignoring navigation');
       return;
@@ -49,8 +49,10 @@ class BaseScreen extends StatelessWidget {
         );
         break;
       case 'Calendar':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Calendar coming soon!')),
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const CalendarScreen()),
+          (route) => false,
         );
         break;
       case 'Documents':
@@ -88,9 +90,12 @@ class BaseScreen extends StatelessWidget {
           body,
         ],
       ),
-      floatingActionButton: NavComponents.buildFAB(() => _navigateToAddSubject(context)),
+      floatingActionButton:
+          NavComponents.buildFAB(() => _navigateToAddSubject(context)),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: NavComponents.buildBottomBar((label) => _handleNavigation(context, label)),
+      bottomNavigationBar: NavComponents.buildBottomBar(
+        (label) => _handleNavigation(context, label),
+      ),
     );
   }
 }

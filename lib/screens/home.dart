@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../widgets/base_screen.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
@@ -14,7 +14,6 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _show(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -28,11 +27,14 @@ class _HomeState extends State<Home> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return null;
-    final doc = await _firestore.collection('users').doc(uid).get();
-    return doc.data();
+  Map<String, dynamic> _loadProfileFromHive() {
+    final box = Hive.box('userBox');
+    return {
+      'displayName': box.get('displayName') ?? '',
+      'photoURL': box.get('photoURL') ?? 'assets/images/cat.png',
+      'email': box.get('email') ?? '',
+      'userId': box.get('userId') ?? FirebaseAuth.instance.currentUser?.uid,
+    };
   }
 
   void _openUserSettings() {
@@ -41,6 +43,10 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    final data = _loadProfileFromHive();
+    final displayName = data['displayName'] as String;
+    final photoURL = data['photoURL'] as String;
+
     return BaseScreen(
       title: 'Home',
       currentScreen: 'Home',
@@ -49,41 +55,31 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<Map<String, dynamic>?>(
-              future: _loadProfile(),
-              builder: (context, snapshot) {
-                final data = snapshot.data ?? {};
-                final displayName = (data['displayName'] ?? '') as String;
-                final photoURL = data['photoURL'] as String?;
-
-                return InkWell(
-                  onTap: _openUserSettings,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: const Color(0xFF7550FF),
-                        backgroundImage: (photoURL != null &&
-                                photoURL.startsWith('http'))
-                            ? NetworkImage(photoURL)
-                            : const AssetImage('assets/images/cat.png')
-                                as ImageProvider,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        displayName.isNotEmpty ? displayName : 'User',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+            InkWell(
+              onTap: _openUserSettings,
+              borderRadius: BorderRadius.circular(24),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: const Color(0xFF7550FF),
+                    backgroundImage: photoURL.startsWith('http')
+                        ? NetworkImage(photoURL)
+                        : const AssetImage('assets/images/cat.png')
+                            as ImageProvider,
                   ),
-                );
-              },
+                  const SizedBox(width: 10),
+                  Text(
+                    displayName.isNotEmpty ? displayName : 'User',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             const Expanded(

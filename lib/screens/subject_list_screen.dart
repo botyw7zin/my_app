@@ -17,6 +17,35 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
   final SubjectService _subjectService = SubjectService();
   String _selectedFilter = 'all';
   Set<String> _expandedSubjects = {};
+  bool _isInitializing = true; // ✅ Add loading state
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  // ✅ Add initialization method
+  Future<void> _initializeData() async {
+    // Wait a bit for auth service initialization to complete
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    final subjectBox = Hive.box<Subject>('subjectsBox');
+    print('📦 [SubjectsListScreen] Loaded subjects: ${subjectBox.length}');
+    
+    // Log first subject for debugging
+    if (subjectBox.isNotEmpty) {
+      final firstSubject = subjectBox.values.first;
+      print('📊 [SubjectsListScreen] First subject: ${firstSubject.name}');
+      print('📊 [SubjectsListScreen] hoursCompleted: ${firstSubject.hoursCompleted}/${firstSubject.hourGoal}');
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
+  }
 
   List<Subject> _filterSubjects(List<Subject> subjects) {
     switch (_selectedFilter) {
@@ -338,7 +367,6 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                     ),
                   ),
                   
-                  // Circular Progress Indicator
                   CircularPercentIndicator(
                     radius: 28.0,
                     lineWidth: 5.0,
@@ -573,140 +601,146 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     return BaseScreen(
       title: 'My Subjects',
       currentScreen: 'Documents',
-      body: ValueListenableBuilder<Box<Subject>>(
-        valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
-        builder: (context, box, widget) {
-          final allSubjects = _subjectService.getAllSubjects();
-          final filteredSubjects = _filterSubjects(allSubjects);
-          final totalHourGoal = _subjectService.getTotalHourGoal();
-
-          if (allSubjects.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bookmark_border,
-                    size: 80,
-                    color: Colors.white.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No subjects yet',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap + to create your first subject',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.3),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+      body: _isInitializing // ✅ Show loading indicator while initializing
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF7550FF),
               ),
-            );
-          }
+            )
+          : ValueListenableBuilder<Box<Subject>>(
+              valueListenable: Hive.box<Subject>('subjectsBox').listenable(),
+              builder: (context, box, widget) {
+                final allSubjects = _subjectService.getAllSubjects();
+                final filteredSubjects = _filterSubjects(allSubjects);
+                final totalHourGoal = _subjectService.getTotalHourGoal();
 
-          return Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF7550FF),
-                      const Color(0xFF7550FF).withOpacity(0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF7550FF).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem(
-                      icon: Icons.bookmark,
-                      label: 'Total',
-                      value: allSubjects.length.toString(),
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                    _buildStatItem(
-                      icon: Icons.timer,
-                      label: 'Total Hours',
-                      value: '$totalHourGoal hrs',
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                    _buildStatItem(
-                      icon: Icons.check_circle,
-                      label: 'Done',
-                      value: allSubjects
-                          .where((s) => s.status == 'done')
-                          .length
-                          .toString(),
-                    ),
-                  ],
-                ),
-              ),
-              if (_selectedFilter != 'all')
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Chip(
-                    label: Text(
-                      'Filter: ${_selectedFilter.toUpperCase()}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: const Color(0xFF7550FF),
-                    deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
-                    onDeleted: () {
-                      setState(() {
-                        _selectedFilter = 'all';
-                      });
-                    },
-                  ),
-                ),
-              Expanded(
-                child: filteredSubjects.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No subjects match this filter',
+                if (allSubjects.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.bookmark_border,
+                          size: 80,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No subjects yet',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
-                            fontSize: 16,
+                            fontSize: 18,
                           ),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: filteredSubjects.length,
-                        itemBuilder: (context, index) {
-                          final subject = filteredSubjects[index];
-                          return _buildExpandableSubjectCard(subject);
-                        },
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap + to create your first subject',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF7550FF),
+                            const Color(0xFF7550FF).withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF7550FF).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-              ),
-            ],
-          );
-        },
-      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatItem(
+                            icon: Icons.bookmark,
+                            label: 'Total',
+                            value: allSubjects.length.toString(),
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                          _buildStatItem(
+                            icon: Icons.timer,
+                            label: 'Total Hours',
+                            value: '$totalHourGoal hrs',
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                          _buildStatItem(
+                            icon: Icons.check_circle,
+                            label: 'Done',
+                            value: allSubjects
+                                .where((s) => s.status == 'done')
+                                .length
+                                .toString(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_selectedFilter != 'all')
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Chip(
+                          label: Text(
+                            'Filter: ${_selectedFilter.toUpperCase()}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: const Color(0xFF7550FF),
+                          deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
+                          onDeleted: () {
+                            setState(() {
+                              _selectedFilter = 'all';
+                            });
+                          },
+                        ),
+                      ),
+                    Expanded(
+                      child: filteredSubjects.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No subjects match this filter',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 80),
+                              itemCount: filteredSubjects.length,
+                              itemBuilder: (context, index) {
+                                final subject = filteredSubjects[index];
+                                return _buildExpandableSubjectCard(subject);
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
       actions: [
         PopupMenuButton<String>(
           icon: const Icon(Icons.filter_list),

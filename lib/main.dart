@@ -13,23 +13,42 @@ import 'services/subject_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  print('🚀 [main] App starting...');
+
   // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  print('✅ [main] Firebase initialized');
 
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(SubjectAdapter());
   await Hive.openBox('userBox');
   await Hive.openBox<Subject>('subjectsBox');
+  
+  // Log initial Hive state
+  final subjectsBox = Hive.box<Subject>('subjectsBox');
+  print('✅ [main] Hive boxes opened');
+  print('📦 [main] Subjects in Hive: ${subjectsBox.length}');
+  
+  // Log details of subjects if they exist
+  if (subjectsBox.isNotEmpty) {
+    print('📊 [main] Subject details:');
+    for (var subject in subjectsBox.values.take(3)) {
+      print('   - ${subject.name}: ${subject.hoursCompleted}/${subject.hourGoal} hours (synced: ${subject.isSynced})');
+    }
+  }
 
   // Initialize WorkManager for background sync
   await SubjectService().initializeWorkManager();
+  print('✅ [main] WorkManager initialized');
 
-  print('>>> [main] Firebase Auth current user: ${FirebaseAuth.instance.currentUser?.uid}');
-  print('>>> [main] Hive boxes opened.');
-  print('>>> [main] WorkManager initialized.');
+  final currentUser = FirebaseAuth.instance.currentUser;
+  print('👤 [main] Firebase Auth current user: ${currentUser?.uid ?? "None"}');
+  if (currentUser != null) {
+    print('📧 [main] User email: ${currentUser.email}');
+  }
 
   runApp(const MyApp());
 }

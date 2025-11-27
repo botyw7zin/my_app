@@ -1,3 +1,4 @@
+import 'dart:async';  // ✅ ADD THIS IMPORT
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
@@ -8,26 +9,21 @@ import '../models/subject_model.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-// IMPORTANT: Top-level callback dispatcher for WorkManager
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     print('>>> [WorkManager] Task started: $task');
-    
+
     try {
-      // Initialize Firebase for background isolate
       await Firebase.initializeApp();
-      
-      // Initialize Hive with adapter
       await Hive.initFlutter();
       if (!Hive.isAdapterRegistered(0)) {
         Hive.registerAdapter(SubjectAdapter());
       }
       await Hive.openBox<Subject>('subjectsBox');
-      
-      // Execute background sync
+
       await SubjectService.backgroundSyncToFirebase();
-      
+
       print('>>> [WorkManager] Task completed successfully: $task');
       return Future.value(true);
     } catch (e) {
@@ -38,19 +34,15 @@ void callbackDispatcher() {
 }
 
 class SubjectService {
-  // Singleton implementation
   static final SubjectService _instance = SubjectService._internal();
   factory SubjectService() => _instance;
   SubjectService._internal();
 
   final _firestore = FirebaseFirestore.instance;
-  bool _connectivityListening = false;
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;  // ✅ Now properly imported
 
-  // WorkManager task names
   static const String _syncTaskName = 'subject-sync-task';
   static const String _periodicSyncTaskName = 'periodic-subject-sync';
-
-  // ------- Main App/Foreground Logic -------
 
   Future<bool> _isOnline() async {
     final conn = await Connectivity().checkConnectivity();
@@ -66,7 +58,7 @@ class SubjectService {
   }) async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
     final now = DateTime.now();
-    final subjectId = Uuid().v4();
+    final subjectId = const Uuid().v4();
     final subject = Subject(
       id: subjectId,
       name: name,
@@ -82,7 +74,7 @@ class SubjectService {
     );
     await subjectBox.put(subjectId, subject);
     print('>>> [createSubject] Created subject in Hive: $subjectId - $name');
-    
+
     if (await _isOnline()) {
       print('>>> [createSubject] Online, syncing now');
       await syncToFirebase();
@@ -107,8 +99,7 @@ class SubjectService {
     if (deadline != null) subject.deadline = deadline;
     if (hourGoal != null) subject.hourGoal = hourGoal;
     subject.updatedAt = now;
-    
-    // Status logic
+
     if (subject.hourGoal <= 0) {
       subject.status = 'done';
     } else if (subject.deadline != null &&
@@ -118,7 +109,7 @@ class SubjectService {
     } else if (subject.status != 'done') {
       subject.status = 'in progress';
     }
-    
+
     subject.isSynced = false;
     await subject.save();
 
@@ -137,7 +128,7 @@ class SubjectService {
     subject.isSynced = false;
     await subject.save();
     print('>>> [deleteSubject] Marked for deletion: ${subject.id} - ${subject.name}');
-    
+
     if (await _isOnline()) {
       print('>>> [deleteSubject] Online, syncing now');
       await syncToFirebase();
@@ -170,8 +161,10 @@ class SubjectService {
     }
 
     // Sync new/updated
-    for (final subject in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
-      print('>>> [syncToFirebase] Syncing: ${subject.id} - ${subject.name}');
+    int syncedCount = 0;
+    for (final subject
+        in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
+      print('>>> [syncToFirebase] Syncing: ${subject.id} - ${subject.name} (hoursCompleted: ${subject.hoursCompleted})');
       try {
         await _firestore
             .collection('users')
@@ -181,14 +174,16 @@ class SubjectService {
             .set(subject.toJson());
         subject.isSynced = true;
         await subject.save();
-        print('>>> [syncToFirebase] Synced to Firestore: ${subject.id}');
+        syncedCount++;
+        print('>>> [syncToFirebase] ✅ Synced to Firestore: ${subject.id}');
       } catch (e) {
-        print('Firestore sync error for subject ${subject.id}: $e');
+        print('❌ Firestore sync error for subject ${subject.id}: $e');
       }
     }
 
     // Sync deletions
-    for (final subject in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
+    for (final subject
+        in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
       print('>>> [syncToFirebase] Remote delete: ${subject.id}');
       try {
         await _firestore
@@ -200,80 +195,83 @@ class SubjectService {
         await subject.delete();
         print('>>> [syncToFirebase] Deleted in Firestore and Hive: ${subject.id}');
       } catch (e) {
-        print('Firestore delete error for subject ${subject.id}: $e');
+        print('❌ Firestore delete error for subject ${subject.id}: $e');
       }
     }
+
+    print('>>> [syncToFirebase] ✅ Sync complete. Synced $syncedCount subjects');
   }
 
-  // ------- WorkManager Integration -------
-
-  /// Initialize WorkManager - call once in main() after Firebase init
   Future<void> initializeWorkManager() async {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: true, // Set to false in production
+      isInDebugMode: true,
     );
     print('>>> [initializeWorkManager] WorkManager initialized');
-    
-    // Register periodic background sync (runs every 15 minutes minimum)
+
     await _registerPeriodicSync();
   }
 
-  /// Schedule a one-off sync task when network becomes available
   Future<void> _scheduleOneOffSync() async {
     await Workmanager().registerOneOffTask(
       _syncTaskName,
       _syncTaskName,
       constraints: Constraints(
-        networkType: NetworkType.connected, // Only run when connected
+        networkType: NetworkType.connected,
       ),
-      initialDelay: Duration(seconds: 10), // Wait 10 seconds before trying
+      initialDelay: const Duration(seconds: 10),
       backoffPolicy: BackoffPolicy.exponential,
-      backoffPolicyDelay: Duration(seconds: 30),
+      backoffPolicyDelay: const Duration(seconds: 30),
     );
     print('>>> [_scheduleOneOffSync] Scheduled one-off sync task');
   }
 
-  /// Register periodic background sync (runs every 15 minutes)
   Future<void> _registerPeriodicSync() async {
     await Workmanager().registerPeriodicTask(
       _periodicSyncTaskName,
       _periodicSyncTaskName,
-      frequency: Duration(minutes: 15), // Minimum allowed frequency
+      frequency: const Duration(minutes: 15),
       constraints: Constraints(
-        networkType: NetworkType.connected, // Only when online
-        requiresBatteryNotLow: true, // Don't drain battery
+        networkType: NetworkType.connected,
+        requiresBatteryNotLow: true,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.keep, // Don't duplicate tasks
+      existingWorkPolicy: ExistingWorkPolicy.keep,
     );
     print('>>> [_registerPeriodicSync] Registered periodic sync task');
   }
 
-  /// Cancel all background sync tasks
   Future<void> cancelBackgroundSync() async {
     await Workmanager().cancelByUniqueName(_syncTaskName);
     await Workmanager().cancelByUniqueName(_periodicSyncTaskName);
     print('>>> [cancelBackgroundSync] Cancelled all sync tasks');
   }
 
-  // Call this ONCE per session after login (works when app is open)
   void listenForConnectivityChanges() {
-    if (_connectivityListening) return;
-    _connectivityListening = true;
+    _connectivitySubscription?.cancel();
     
-    Connectivity().onConnectivityChanged.listen((conn) async {
+    print('>>> [listenForConnectivityChanges] Registering connectivity listener');
+
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((conn) async {
       print('>>> [listenForConnectivityChanges] Connectivity changed: $conn');
       final user = FirebaseAuth.instance.currentUser;
       print('>>> [listenForConnectivityChanges] user: ${user?.uid}');
-      
+
       final subjectBox = Hive.box<Subject>('subjectsBox');
-      print('>>> [listenForConnectivityChanges] Unsynced: ${subjectBox.values.where((s) => !s.isSynced).length}');
-      
-      if (conn != ConnectivityResult.none) {
-        print('>>> [listenForConnectivityChanges] Online, syncing immediately');
+      final unsyncedCount = subjectBox.values.where((s) => !s.isSynced).length;
+      print('>>> [listenForConnectivityChanges] Unsynced: $unsyncedCount');
+
+      if (conn != ConnectivityResult.none && unsyncedCount > 0) {
+        print('>>> [listenForConnectivityChanges] 🌐 Online with pending changes, syncing immediately');
         await syncToFirebase();
       }
     });
+  }
+
+  // ✅ FIXED: Removed async/await
+  void stopListeningForConnectivityChanges() {
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    print('>>> [stopListeningForConnectivityChanges] Listener cancelled');
   }
 
   Future<void> clearLocalData() async {
@@ -284,101 +282,115 @@ class SubjectService {
 
   Future<void> loadFromFirebase(String userId) async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
-    final snap = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('subjects')
-        .get();
-    print('>>> [loadFromFirebase] Fetching remote subjects...');
     
-    for (final doc in snap.docs) {
-      final remoteJson = doc.data();
-      final remote = Subject.fromJson(remoteJson);
-      final local = subjectBox.get(remote.id);
-      
-      if (local == null || local.updatedAt.isBefore(remote.updatedAt)) {
-        await subjectBox.put(remote.id, remote);
-        print('>>> [loadFromFirebase] Updated local subject: ${remote.id}');
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('subjects')
+          .get();
+      print('>>> [loadFromFirebase] Fetching remote subjects (found: ${snap.docs.length})...');
+
+      int addedCount = 0;
+      int keptCount = 0;
+
+      for (final doc in snap.docs) {
+        final remoteJson = doc.data();
+        final remote = Subject.fromJson(remoteJson);
+        final local = subjectBox.get(remote.id);
+
+        if (local == null) {
+          await subjectBox.put(remote.id, remote);
+          addedCount++;
+          print('>>> [loadFromFirebase] ✅ Added new subject: ${remote.id} (hoursCompleted: ${remote.hoursCompleted})');
+        } else {
+          keptCount++;
+          print('>>> [loadFromFirebase] ⏭️  Kept local subject (hoursCompleted: ${local.hoursCompleted}): ${remote.id}');
+        }
       }
+      
+      print('>>> [loadFromFirebase] ✅ Load complete. Added: $addedCount, Kept: $keptCount');
+    } catch (e) {
+      print('❌ [loadFromFirebase] Error loading from Firebase: $e');
     }
   }
 
-  /// Get all subjects (non-deleted) from Hive
-List<Subject> getAllSubjects() {
-  final subjectBox = Hive.box<Subject>('subjectsBox');
-  return subjectBox.values
-      .where((subject) => !subject.isDeleted)
-      .toList()
-    ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Most recent first
-}
-
-/// Get subjects by type
-List<Subject> getSubjectsByType(String type) {
-  return getAllSubjects()
-      .where((subject) => subject.type == type)
-      .toList();
-}
-
-/// Get subjects by status
-List<Subject> getSubjectsByStatus(String status) {
-  return getAllSubjects()
-      .where((subject) => subject.status == status)
-      .toList();
-}
-
-/// Calculate total hour goal across all subjects
-int getTotalHourGoal() {
-  return getAllSubjects()
-      .fold(0, (sum, subject) => sum + subject.hourGoal);
-}
-
-// Increment hours, clamp to goal, auto-set done
-Future<void> addStudyHours(Subject subject, int deltaHours) async {
-  final now = DateTime.now();
-  subject.hoursCompleted = (subject.hoursCompleted + deltaHours).clamp(0, subject.hourGoal);
-  subject.updatedAt = now;
-
-  if (subject.hoursCompleted >= subject.hourGoal && subject.hourGoal > 0) {
-    subject.status = 'done';
-  } else if (subject.deadline != null &&
-      now.isAfter(subject.deadline!) &&
-      subject.status != 'done') {
-    subject.status = 'late';
-  } else if (subject.status != 'done') {
-    subject.status = 'in progress';
+  List<Subject> getAllSubjects() {
+    final subjectBox = Hive.box<Subject>('subjectsBox');
+    return subjectBox.values
+        .where((subject) => !subject.isDeleted)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  subject.isSynced = false;
-  await subject.save();
-
-  if (await _isOnline()) {
-    await syncToFirebase();
+  List<Subject> getSubjectsByType(String type) {
+    return getAllSubjects()
+        .where((subject) => subject.type == type)
+        .toList();
   }
-}
 
+  List<Subject> getSubjectsByStatus(String status) {
+    return getAllSubjects()
+        .where((subject) => subject.status == status)
+        .toList();
+  }
 
-  /// ---- For Workmanager/background sync ----
+  int getTotalHourGoal() {
+    return getAllSubjects()
+        .fold(0, (sum, subject) => sum + subject.hourGoal);
+  }
+
+  Future<void> addStudyHours(Subject subject, int deltaHours) async {
+    print('>>> [addStudyHours] 📊 BEFORE: hoursCompleted=${subject.hoursCompleted}, hourGoal=${subject.hourGoal}, isSynced=${subject.isSynced}');
+    
+    final now = DateTime.now();
+    subject.hoursCompleted =
+        (subject.hoursCompleted + deltaHours).clamp(0, subject.hourGoal);
+    subject.updatedAt = now;
+
+    if (subject.hoursCompleted >= subject.hourGoal && subject.hourGoal > 0) {
+      subject.status = 'done';
+    } else if (subject.deadline != null &&
+        now.isAfter(subject.deadline!) &&
+        subject.status != 'done') {
+      subject.status = 'late';
+    } else if (subject.status != 'done') {
+      subject.status = 'in progress';
+    }
+
+    subject.isSynced = false;
+    await subject.save();
+
+    print('>>> [addStudyHours] 📊 AFTER: hoursCompleted=${subject.hoursCompleted}, status=${subject.status}, isSynced=${subject.isSynced}');
+
+    if (await _isOnline()) {
+      print('>>> [addStudyHours] 🌐 Online, syncing now');
+      await syncToFirebase();
+    } else {
+      print('>>> [addStudyHours] 📴 Offline, scheduling background sync');
+      await _scheduleOneOffSync();
+    }
+  }
+
   static Future<void> backgroundSyncToFirebase() async {
     print(">>> [backgroundSyncToFirebase] Background sync task started");
-    
+
     final subjectBox = Hive.box<Subject>('subjectsBox');
     final user = FirebaseAuth.instance.currentUser;
-    
+
     if (user == null) {
       print('>>> [backgroundSyncToFirebase] No user, skipping sync');
       return;
     }
-    
-    // Check connectivity
+
     final conn = await Connectivity().checkConnectivity();
     if (conn == ConnectivityResult.none) {
       print('>>> [backgroundSyncToFirebase] No connectivity, aborting');
       return;
     }
-    
+
     final now = DateTime.now();
-    
-    // Mark as late if deadline has passed
+
     for (final subject in subjectBox.values) {
       if (subject.hourGoal > 0 &&
           subject.deadline != null &&
@@ -390,9 +402,9 @@ Future<void> addStudyHours(Subject subject, int deltaHours) async {
         await subject.save();
       }
     }
-    
-    // Sync new/updated
-    for (final subject in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
+
+    for (final subject
+        in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -402,14 +414,16 @@ Future<void> addStudyHours(Subject subject, int deltaHours) async {
             .set(subject.toJson());
         subject.isSynced = true;
         await subject.save();
-        print('>>> [backgroundSyncToFirebase] Synced to Firestore: ${subject.id}');
+        print(
+            '>>> [backgroundSyncToFirebase] Synced to Firestore: ${subject.id}');
       } catch (e) {
-        print('Firestore background sync error for subject ${subject.id}: $e');
+        print(
+            '❌ Firestore background sync error for subject ${subject.id}: $e');
       }
     }
-    
-    // Sync deletions
-    for (final subject in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
+
+    for (final subject
+        in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -418,12 +432,12 @@ Future<void> addStudyHours(Subject subject, int deltaHours) async {
             .doc(subject.id)
             .delete();
         await subject.delete();
-        print('>>> [backgroundSyncToFirebase] Deleted in Firestore and Hive: ${subject.id}');
+        print(
+            '>>> [backgroundSyncToFirebase] Deleted in Firestore and Hive: ${subject.id}');
       } catch (e) {
-        print('Firestore background delete error for subject ${subject.id}: $e');
+        print(
+            '❌ Firestore background delete error for subject ${subject.id}: $e');
       }
     }
   }
 }
-
-
