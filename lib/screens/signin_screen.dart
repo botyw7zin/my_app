@@ -152,108 +152,122 @@ class _LoginScreenState extends State<LoginScreen> {
           
           // Main content
           SafeArea(
-            child: Column(
-              children: [
-                // Top section for logo/image
-                Expanded(
-                  flex: 2,
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                ),
+                child: IntrinsicHeight(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      const SizedBox(height: 40),
+                      // Logo at top
                       Image.asset(
                         'assets/images/StudySync.png',
                         width: 240,
                         height: 220,
                       ),
+                      
+                      const Spacer(),
+                      
+                      // Form content
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              // Google Sign-In button
+                              SizedBox(
+                                width: 330,
+                                height: 50,
+                                child: OutlinedButton.icon(
+                                  onPressed: _isLoading ? null : _signInWithGoogle,
+                                  icon: Image.asset('assets/images/google_Logo.png', width: 28, height: 28),
+                                  label: const Text(
+                                    'Sign in with Google',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Lexend Deca',
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white),
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              
+                              // Email field
+                              CustomTextField(
+                                hintText: 'email',
+                                controller: _emailController,
+                                obscureText: false,
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Password field
+                              CustomTextField(
+                                hintText: 'password',
+                                controller: _passwordController,
+                                obscureText: true,
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Forgot Password
+                              Align(
+                                alignment: Alignment.center,
+                                child: TextButton(
+                                  onPressed: _isLoading ? null : _showForgotPasswordDialog,
+                                  child: const Text(
+                                    'Forgot Password?',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              
+                              // Login Button at bottom
+                              CustomButton(
+                                text: 'LOGIN',
+                                onPressed: _isLoading ? null : _signInWithEmail,
+                                width: 330,
+                                height: 52,
+                                fontSize: 20,
+                                backgroundColor: const Color(0xFF7550FF),
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Sign up link
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/signup');
+                                },
+                                child: const Text(
+                                  'Don\'t have an account? Sign Up',
+                                  style: TextStyle(color: Colors.white,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white,
+                                  decorationThickness: 1,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                Spacer(flex: 1),
-                // Centered bottom section: fields and buttons
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 32),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Google Sign-In button at top
-                          SizedBox(
-                            width: 330,
-                            height: 50,
-                            child: OutlinedButton.icon(
-                              onPressed: _isLoading ? null : _signInWithGoogle,
-                              icon: Image.asset('assets/images/google_Logo.png', width: 28, height: 28),
-                              label: Text(
-                                'Sign in with Google',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontFamily: 'Lexend Deca',
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                side: BorderSide(color: Colors.white),
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                          CustomTextField(
-                            hintText: 'email',
-                            controller: _emailController,
-                            obscureText: false,
-                          ),
-                          SizedBox(height: 16),
-                          CustomTextField(
-                            hintText: 'password',
-                            controller: _passwordController,
-                            obscureText: true,
-                          ),
-                          SizedBox(height: 20),
-                          SizedBox(
-                            width: 274,
-                            height: 50,
-                            child: CustomButton(
-                              text: 'LOGIN',
-                              onPressed: _isLoading ? null : _signInWithEmail,
-                              width: 274,
-                              height: 50,
-                              fontSize: 18,
-                              backgroundColor: Color(0xFF7550FF),
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          TextButton(
-                            onPressed: _isLoading ? null : _showForgotPasswordDialog,
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/signup');
-                            },
-                            child: Text(
-                              'Don\'t have an account? Sign Up',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          SizedBox(height: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

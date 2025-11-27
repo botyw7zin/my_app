@@ -14,6 +14,7 @@ class FriendsScreen extends StatefulWidget {
 class _FriendsScreenState extends State<FriendsScreen> {
   final FriendService _friendService = FriendService();
   final TextEditingController _searchController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
   String _error = '';
@@ -23,6 +24,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<Map<String, dynamic>?> _loadProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.data();
   }
 
   Future<void> _performSearch() async {
@@ -216,7 +224,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
             return InkWell(
               onTap: () {
-                // Show options when tapped
                 showModalBottomSheet(
                   context: context,
                   backgroundColor: const Color(0xFF363A4D),
@@ -318,97 +325,159 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return BaseScreen(
-      title: 'Friends',
-      currentScreen: 'People',
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Search bar with WHITE background and BLACK text
-            TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.black), // BLACK text
-              decoration: InputDecoration(
-                hintText: 'Search by username',
-                hintStyle: const TextStyle(color: Colors.black45), // Dark gray hint
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)), // Purple icon
-                filled: true,
-                fillColor: Colors.white, // WHITE background
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.black54), // Black clear icon
-                        onPressed: () {
-                          setState(() {
-                            _searchController.clear();
-                            _results = [];
-                            _error = '';
-                          });
-                        },
-                      )
-                    : null,
-              ),
-              onSubmitted: (_) => _performSearch(),
-            ),
-            const SizedBox(height: 8),
-            if (_error.isNotEmpty)
-              Text(
-                _error,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-              ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(color: Color(0xFF7550FF)),
-              ),
-            const SizedBox(height: 8),
+Widget build(BuildContext context) {
+  return BaseScreen(
+    title: '',
+    currentScreen: 'People',
+    appBarColor: const Color(0xFF2C2F3E),
+    automaticallyImplyLeading: false,
+    body: Column(
+      children: [
+        // Hello! Username header - ABSOLUTE TOP (no padding at all)
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 8), // Minimal top padding
+          child: FutureBuilder<Map<String, dynamic>?>(
+            future: _loadProfile(),
+            builder: (context, snapshot) {
+              final data = snapshot.data ?? {};
+              final displayName = (data['displayName'] ?? '') as String;
+              final photoURL = data['photoURL'] as String?;
 
-            // Search results (if any)
-            if (_results.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return Row(
                 children: [
-                  const Text(
-                    'Search results',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: const Color(0xFF7550FF),
+                    backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                        ? NetworkImage(photoURL)
+                        : const AssetImage('assets/images/cat.png') as ImageProvider,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Hello!',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          displayName.isNotEmpty ? displayName : 'User',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12), // Reduced from 16
+
+        // Rest of the content...
+
+          // Scrollable content below
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Search bar
+                  TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.black),
+                    decoration: InputDecoration(
+                      hintText: 'Search by username',
+                      hintStyle: const TextStyle(color: Colors.black45),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.black54),
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _results = [];
+                                  _error = '';
+                                });
+                              },
+                            )
+                          : null,
+                    ),
+                    onSubmitted: (_) => _performSearch(),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_error.isNotEmpty)
+                    Text(
+                      _error,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                    ),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(color: Color(0xFF7550FF)),
+                    ),
+                  const SizedBox(height: 8),
+
+                  // Search results
+                  if (_results.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Search results',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _results.length,
+                          itemBuilder: (context, index) =>
+                              _buildSearchResultTile(_results[index]),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+
+                  // Friends list
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Your friends',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _results.length,
-                    itemBuilder: (context, index) =>
-                        _buildSearchResultTile(_results[index]),
-                  ),
-                  const SizedBox(height: 16),
+                  _buildFriendsList(),
                 ],
               ),
-
-            // Friends list
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Your friends',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
-            const SizedBox(height: 8),
-            _buildFriendsList(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
