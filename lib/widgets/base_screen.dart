@@ -15,6 +15,7 @@ class BaseScreen extends StatelessWidget {
   final String currentScreen; // 'Home', 'Documents', 'People', 'Calendar'
   final bool automaticallyImplyLeading;
   final bool showAppBar; // New property to toggle AppBar visibility
+  final Widget? leading;
 
   const BaseScreen({
     super.key,
@@ -25,6 +26,9 @@ class BaseScreen extends StatelessWidget {
     this.appBarColor,
     this.automaticallyImplyLeading = false,
     this.showAppBar = true, // Defaults to true
+    this.leading,
+
+    
   });
 
   void _navigateToAddSubject(BuildContext context) {
@@ -81,6 +85,8 @@ class BaseScreen extends StatelessWidget {
       // If showAppBar is false, we pass null. This removes the header space.
       appBar: showAppBar
           ? AppBar(
+              leading: leading,
+
               title: Text(title),
               backgroundColor: appBarColor ?? const Color(0xFF7550FF),
               automaticallyImplyLeading: automaticallyImplyLeading,
