@@ -28,10 +28,6 @@ class _HomeState extends State<Home> {
     }
   }
 
-  void _openUserSettings() {
-    _show('Settings coming soon');
-  }
-
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
@@ -39,12 +35,14 @@ class _HomeState extends State<Home> {
       currentScreen: 'Home',
       appBarColor: const Color(0xFF2C2F3E),
       automaticallyImplyLeading: false,
+      showAppBar: false, // 1. Hide the AppBar
+      
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16), // 2. Standard padding is now safe
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hello! Username header with notification (reacts to Hive changes)
+            // Header Row
             ValueListenableBuilder(
               valueListenable: Hive.box('userBox').listenable(),
               builder: (context, Box box, _) {
@@ -53,6 +51,7 @@ class _HomeState extends State<Home> {
                     (box.get('photoURL') ?? 'assets/images/cat.png') as String;
 
                 return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Profile picture
                     CircleAvatar(
@@ -65,7 +64,7 @@ class _HomeState extends State<Home> {
                     ),
                     const SizedBox(width: 12),
 
-                    // Hello! Username
+                    // Name Column
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,17 +84,17 @@ class _HomeState extends State<Home> {
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
 
-                    // Notification bell icon
+                    // --- ICON 1: Notifications ---
                     IconButton(
                       icon: const Icon(Icons.notifications, color: Colors.white),
                       iconSize: 28,
                       tooltip: 'Friend Requests',
+                      constraints: const BoxConstraints(),
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -103,6 +102,47 @@ class _HomeState extends State<Home> {
                             builder: (context) => const FriendRequestsScreen(),
                           ),
                         );
+                      },
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // --- ICON 2: Sign Out ---
+                    IconButton(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      iconSize: 28,
+                      tooltip: 'Sign Out',
+                      constraints: const BoxConstraints(),
+                      onPressed: () async {
+                        final shouldLogout = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: const Color(0xFF363A4D),
+                            title: const Text('Sign Out',
+                                style: TextStyle(color: Colors.white)),
+                            content: const Text(
+                              'Are you sure you want to sign out?',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Sign Out',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldLogout == true && mounted) {
+                          _signOut();
+                        }
                       },
                     ),
                   ],
@@ -125,43 +165,6 @@ class _HomeState extends State<Home> {
           ],
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
-          tooltip: 'Sign Out',
-          onPressed: () async {
-            final shouldLogout = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: const Color(0xFF363A4D),
-                title:
-                    const Text('Sign Out', style: TextStyle(color: Colors.white)),
-                content: const Text(
-                  'Are you sure you want to sign out?',
-                  style: TextStyle(color: Colors.white70),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text(
-                      'Sign Out',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            );
-
-            if (shouldLogout == true && mounted) {
-              _signOut();
-            }
-          },
-        ),
-      ],
     );
   }
 }

@@ -14,6 +14,7 @@ class BaseScreen extends StatelessWidget {
   final Color? appBarColor;
   final String currentScreen; // 'Home', 'Documents', 'People', 'Calendar'
   final bool automaticallyImplyLeading;
+  final bool showAppBar; // New property to toggle AppBar visibility
 
   const BaseScreen({
     super.key,
@@ -23,6 +24,7 @@ class BaseScreen extends StatelessWidget {
     this.actions,
     this.appBarColor,
     this.automaticallyImplyLeading = false,
+    this.showAppBar = true, // Defaults to true
   });
 
   void _navigateToAddSubject(BuildContext context) {
@@ -33,10 +35,7 @@ class BaseScreen extends StatelessWidget {
   }
 
   void _handleNavigation(BuildContext context, String label) {
-    print('>>> [BaseScreen] Navigation tapped: $label from $currentScreen');
-
     if (label == currentScreen) {
-      print('>>> [BaseScreen] Already on $label screen, ignoring navigation');
       return;
     }
 
@@ -70,7 +69,7 @@ class BaseScreen extends StatelessWidget {
         );
         break;
       default:
-        print('>>> [BaseScreen] Unknown navigation label: $label');
+        debugPrint('>>> [BaseScreen] Unknown navigation label: $label');
     }
   }
 
@@ -78,16 +77,26 @@ class BaseScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: appBarColor ?? const Color(0xFF7550FF),
-        automaticallyImplyLeading: automaticallyImplyLeading,
-        actions: actions,
-      ),
+      
+      // If showAppBar is false, we pass null. This removes the header space.
+      appBar: showAppBar
+          ? AppBar(
+              title: Text(title),
+              backgroundColor: appBarColor ?? const Color(0xFF7550FF),
+              automaticallyImplyLeading: automaticallyImplyLeading,
+              actions: actions,
+            )
+          : null,
+          
       body: Stack(
         children: [
           const GlowyBackground(),
-          body,
+          
+          // --- THE FIX IS HERE ---
+          // SafeArea ensures content doesn't go behind the status bar or notch.
+          SafeArea(
+            child: body,
+          ),
         ],
       ),
       floatingActionButton:

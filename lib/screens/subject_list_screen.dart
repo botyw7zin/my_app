@@ -5,6 +5,7 @@ import '../models/subject_model.dart';
 import '../services/subject_service.dart';
 import '../widgets/base_screen.dart';
 import 'update_subject.dart';
+import 'friends_request_screen.dart'; // Add this line
 
 class SubjectsListScreen extends StatefulWidget {
   const SubjectsListScreen({super.key});
@@ -600,6 +601,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
   Widget build(BuildContext context) {
     return BaseScreen(
       title: 'My Subjects',
+      showAppBar: false,
       currentScreen: 'Documents',
       body: _isInitializing // ✅ Show loading indicator while initializing
           ? const Center(
@@ -647,6 +649,66 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
 
                 return Column(
                   children: [
+                   // 1. HEADER SECTION (Updated with Filter)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: ValueListenableBuilder(
+                      valueListenable: Hive.box('userBox').listenable(),
+                      builder: (context, Box userBox, _) {
+                        final displayName = (userBox.get('displayName') ?? '') as String;
+                        final photoURL = (userBox.get('photoURL') ?? 'assets/images/cat.png') as String;
+                        return Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: const Color(0xFF7550FF),
+                              backgroundImage: (photoURL.startsWith('http')) 
+                                  ? NetworkImage(photoURL) 
+                                  : const AssetImage('assets/images/cat.png') as ImageProvider,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Hello!', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                  Text(
+                                    displayName.isNotEmpty ? displayName : 'User',
+                                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Filter Icon (Moved here)
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              onSelected: (value) {
+                                setState(() {
+                                  _selectedFilter = value;
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'all', child: Text('All Subjects')),
+                                const PopupMenuDivider(),
+                                const PopupMenuItem(value: 'study', child: Text('Study')),
+                                const PopupMenuItem(value: 'personal', child: Text('Personal')),
+                                const PopupMenuDivider(),
+                                const PopupMenuItem(value: 'in progress', child: Text('In Progress')),
+                                const PopupMenuItem(value: 'done', child: Text('Done')),
+                                const PopupMenuItem(value: 'late', child: Text('Late')),
+                              ],
+                            ),
+                            // Notification Icon
+                            IconButton(
+                              icon: const Icon(Icons.notifications, color: Colors.white),
+                              iconSize: 28,
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestsScreen())),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                     Container(
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(20),
@@ -717,6 +779,22 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                           },
                         ),
                       ),
+                      // --- LIST HEADER TEXT ---
+                          if (allSubjects.isNotEmpty)
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Subjects - projects',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
                     Expanded(
                       child: filteredSubjects.isEmpty
                           ? Center(

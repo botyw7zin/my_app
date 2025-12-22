@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friends_service.dart';
 import '../widgets/base_screen.dart';
+import 'friends_request_screen.dart'; // Add this line
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -325,158 +326,174 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return BaseScreen(
-    title: '',
-    currentScreen: 'People',
-    appBarColor: const Color(0xFF2C2F3E),
-    automaticallyImplyLeading: false,
-    body: Column(
-      children: [
-        // Hello! Username header - ABSOLUTE TOP (no padding at all)
-        Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 8), // Minimal top padding
-          child: FutureBuilder<Map<String, dynamic>?>(
-            future: _loadProfile(),
-            builder: (context, snapshot) {
-              final data = snapshot.data ?? {};
-              final displayName = (data['displayName'] ?? '') as String;
-              final photoURL = data['photoURL'] as String?;
+  Widget build(BuildContext context) {
+    return BaseScreen(
+      title: '',
+      currentScreen: 'People',
+      appBarColor: const Color(0xFF2C2F3E),
+      showAppBar: false, // Hide the default purple bar
+      automaticallyImplyLeading: false,
+      body: Column(
+        children: [
+          // 1. HEADER (Profile + Hello + Notification Icon)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: FutureBuilder<Map<String, dynamic>?>(
+              future: _loadProfile(),
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? {};
+                final displayName = (data['displayName'] ?? '') as String;
+                final photoURL = data['photoURL'] as String?;
 
-              return Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFF7550FF),
-                    backgroundImage: (photoURL != null && photoURL.startsWith('http'))
-                        ? NetworkImage(photoURL)
-                        : const AssetImage('assets/images/cat.png') as ImageProvider,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Hello!',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
+                return Row(
+                  children: [
+                    // Profile Picture
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: const Color(0xFF7550FF),
+                      backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                          ? NetworkImage(photoURL)
+                          : const AssetImage('assets/images/cat.png') as ImageProvider,
+                    ),
+                    const SizedBox(width: 12),
+                    // "Hello! Name" Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hello!',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
                           ),
-                        ),
-                        Text(
-                          displayName.isNotEmpty ? displayName : 'User',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                          Text(
+                            displayName.isNotEmpty ? displayName : 'User',
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontSize: 20, 
+                              fontWeight: FontWeight.bold
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    // Notification Icon (Top Right)
+                    IconButton(
+                      icon: const Icon(Icons.notifications, color: Colors.white, size: 28),
+                      onPressed: () {
+                         // Navigate to friend requests
+                         Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestsScreen()));
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+
+          // 2. SEARCH SECTION ("Invite a friend")
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
+                  child: Text(
+                    'invite a friend',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+                TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: Colors.black),
+                  decoration: InputDecoration(
+                    hintText: 'friend username',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, color: Colors.black, size: 16),
+                      onPressed: _performSearch,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) => _performSearch(),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12), // Reduced from 16
 
-        // Rest of the content...
+          // 3. SEARCH RESULTS or FRIENDS LIST
+          if (_isLoading)
+             const Padding(
+               padding: EdgeInsets.all(30),
+               child: Center(child: CircularProgressIndicator(color: Color(0xFF7550FF))),
+             ),
+          
+          if (_error.isNotEmpty)
+             Padding(
+               padding: const EdgeInsets.all(16.0),
+               child: Text(_error, style: const TextStyle(color: Colors.redAccent)),
+             ),
 
-          // Scrollable content below
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          // Conditional List Rendering
+          if (_results.isNotEmpty)
+            // Show Search Results
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    const Text('Search Results', style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _results.length,
+                        itemBuilder: (context, index) => _buildSearchResultTile(_results[index]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            // Show Your Friends List
+            Expanded(
               child: Column(
                 children: [
-                  // Search bar
-                  TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: 'Search by username',
-                      hintStyle: const TextStyle(color: Colors.black45),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF7550FF)),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.black54),
-                              onPressed: () {
-                                setState(() {
-                                  _searchController.clear();
-                                  _results = [];
-                                  _error = '';
-                                });
-                              },
-                            )
-                          : null,
-                    ),
-                    onSubmitted: (_) => _performSearch(),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_error.isNotEmpty)
-                    Text(
-                      _error,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                    ),
-                  if (_isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(color: Color(0xFF7550FF)),
-                    ),
-                  const SizedBox(height: 8),
-
-                  // Search results
-                  if (_results.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Search results',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _results.length,
-                          itemBuilder: (context, index) =>
-                              _buildSearchResultTile(_results[index]),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-
-                  // Friends list
-                  const Align(
-                    alignment: Alignment.centerLeft,
+                  const SizedBox(height: 30),
+                  // "Your Friends" Title
+                  const Center(
                     child: Text(
-                      'Your friends',
+                      'Your Friends',
                       style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                        color: Colors.white,
+                        fontSize: 22,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  _buildFriendsList(),
+                  const SizedBox(height: 10),
+                  // The List
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildFriendsList(),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
         ],
       ),
     );
