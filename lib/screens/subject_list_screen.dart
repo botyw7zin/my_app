@@ -195,7 +195,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
 
     try {
       if (isDone) {
-        subject.hoursCompleted = 0;
+        subject.hoursCompleted = 0.0;
         await _subjectService.updateSubject(subject);
 
         if (mounted) {
@@ -216,7 +216,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
           );
         }
       } else {
-        subject.hoursCompleted = subject.hourGoal;
+        subject.hoursCompleted = subject.hourGoal.toDouble();
         await _subjectService.updateSubject(subject);
 
         if (mounted) {
@@ -319,6 +319,16 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                   _expandedSubjects.add(subject.id);
                 }
               });
+            },
+            onLongPress: () async {
+              // Open timer session page for this subject
+              final res = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TimerSessionScreen(subject: subject),
+                ),
+              );
+              if (res == true && mounted) setState(() {});
             },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
@@ -438,7 +448,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                     ),
                   ),
                   Text(
-                    '${subject.hoursCompleted}/${subject.hourGoal} hours',
+                    '${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hours',
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 12,

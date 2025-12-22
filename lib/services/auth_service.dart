@@ -33,22 +33,13 @@ class AuthService {
   Future<void> _initializePostAuthServices(String userId) async {
     print('🔵 [_initializePostAuthServices] Initializing for user: $userId');
 
+    // Perform a full two-way sync: pull remote -> local and push local -> remote
+    await _subjectService.syncBothWays();
 
-    // Load user's subjects from Firebase (merges remote data into local Hive)
-    await _subjectService.loadFromFirebase(userId);
-
-
-    // 3) Start connectivity listener for future changes
+    // Start connectivity listener for future changes (will trigger two-way sync when back online)
     _subjectService.listenForConnectivityChanges();
 
-
-    // Trigger immediate sync to push any local changes made while offline
-    // (e.g., if user created subjects offline then logged in)
-    await _subjectService.syncToFirebase();
-    print('✅ [_initializePostAuthServices] Initial sync completed');
-
-
-    print('✅ [_initializePostAuthServices] Services initialized');
+    print('✅ [_initializePostAuthServices] Initial two-way sync completed');
   }
 
 
@@ -343,6 +334,29 @@ class AuthService {
       rethrow;
     } catch (e) {
       print('🔴 [changePassword] Unexpected error: $e');
+      rethrow;
+    }
+  }
+
+  /// Change email for the currently authenticated user
+  Future<void> changeEmail(String newEmail) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw FirebaseAuthException(code: 'no-user', message: 'No user logged in');
+
+      // Attempt to update email; this may throw requires-recent-login
+      // Cast to dynamic to avoid analyzer/platform SDK mismatches
+      await (user as dynamic).updateEmail(newEmail);
+
+      // Update Firestore user doc and local Hive cache
+      await _firestore.collection('users').doc(user.uid).update({'email': newEmail});
+      final box = Hive.box('userBox');
+      await box.put('email', newEmail);
+    } on FirebaseAuthException catch (e) {
+      print('🔴 [changeEmail] Auth error: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('🔴 [changeEmail] Unexpected error: $e');
       rethrow;
     }
   }

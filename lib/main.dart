@@ -37,7 +37,7 @@ void main() async {
   if (subjectsBox.isNotEmpty) {
     print('📊 [main] Subject details:');
     for (var subject in subjectsBox.values.take(3)) {
-      print('   - ${subject.name}: ${subject.hoursCompleted}/${subject.hourGoal} hours (synced: ${subject.isSynced})');
+      print('   - ${subject.name}: ${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hours (synced: ${subject.isSynced})');
     }
   }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../widgets/base_screen.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
+import 'incoming_sessions_screen.dart';
+import 'user_settings_screen.dart';
+import '../services/subject_service.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,6 +17,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
+  final SubjectService _subjectService = SubjectService();
+  bool _isSyncing = false;
 
   void _show(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -27,6 +31,29 @@ class _HomeState extends State<Home> {
       _show('Sign out failed: $e');
     }
   }
+
+  Future<void> _syncNow() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    try {
+      await _subjectService.syncBothWays();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sync completed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  // User settings are opened via the avatar tap; no extra helpers required.
 
   @override
   Widget build(BuildContext context) {
@@ -53,14 +80,21 @@ class _HomeState extends State<Home> {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Profile picture
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF7550FF),
-                      backgroundImage: (photoURL.startsWith('http'))
-                          ? NetworkImage(photoURL)
-                          : const AssetImage('assets/images/cat.png')
-                              as ImageProvider,
+                    // Profile picture (tappable -> settings)
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UserSettingsScreen()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFF7550FF),
+                        backgroundImage: (photoURL.startsWith('http'))
+                            ? NetworkImage(photoURL)
+                            : const AssetImage('assets/images/cat.png') as ImageProvider,
+                      ),
                     ),
                     const SizedBox(width: 12),
 

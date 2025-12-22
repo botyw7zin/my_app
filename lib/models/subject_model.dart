@@ -15,7 +15,7 @@ class Subject extends HiveObject {
   @HiveField(8) bool isSynced;
   @HiveField(9) bool isDeleted;
   @HiveField(10) String status; // "in progress", "done", "late"
-  @HiveField(11) int hoursCompleted; // NEW
+  @HiveField(11) double hoursCompleted; // NEW (supports fractional hours)
 
   Subject({
     required this.id,
@@ -29,7 +29,7 @@ class Subject extends HiveObject {
     this.isSynced = false,
     this.isDeleted = false,
     this.status = 'in progress',
-    this.hoursCompleted = 0, // NEW default
+    this.hoursCompleted = 0.0, // NEW default (hours as double)
   });
 
   Map<String, dynamic> toJson() {
@@ -43,7 +43,7 @@ class Subject extends HiveObject {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'status': status,
-      'hoursCompleted': hoursCompleted, // NEW
+      'hoursCompleted': hoursCompleted, // NEW (stored as double)
     };
   }
 
@@ -60,7 +60,7 @@ class Subject extends HiveObject {
       isSynced: true,
       isDeleted: false,
       status: json['status'] ?? 'in progress',
-      hoursCompleted: json['hoursCompleted'] ?? 0, // NEW
+      hoursCompleted: (json['hoursCompleted'] ?? 0).toDouble(), // NEW
     );
   }
 }

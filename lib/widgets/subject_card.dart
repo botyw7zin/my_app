@@ -445,7 +445,7 @@ class SubjectCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${subject.hoursCompleted}/${subject.hourGoal} hrs  ($progressPercent%)',
+                        '${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hrs  ($progressPercent%)',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,

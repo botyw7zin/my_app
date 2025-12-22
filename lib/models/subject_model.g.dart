@@ -17,21 +17,25 @@ class SubjectAdapter extends TypeAdapter<Subject> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Subject(
-      id: fields[0] as String,
-      name: fields[1] as String,
-      description: fields[2] as String,
-      type: fields[3] as String,
+      id: (fields[0] as String?) ?? '',
+      name: (fields[1] as String?) ?? '',
+      description: (fields[2] as String?) ?? '',
+      type: (fields[3] as String?) ?? '',
       deadline: fields[4] as DateTime?,
-      hourGoal: fields[5] as int,
-      createdAt: fields[6] as DateTime,
-      updatedAt: fields[7] as DateTime,
+      hourGoal: (fields[5] as int?) ?? 0,
+      createdAt: (fields[6] as DateTime?) ?? DateTime.now(),
+      updatedAt: (fields[7] as DateTime?) ?? DateTime.now(),
+      isSynced: (fields[8] as bool?) ?? false,
+      isDeleted: (fields[9] as bool?) ?? false,
+      status: (fields[10] as String?) ?? 'in progress',
+      hoursCompleted: (fields[11] is int) ? (fields[11] as int).toDouble() : (fields[11] as double?) ?? 0.0,
     );
   }
 
   @override
   void write(BinaryWriter writer, Subject obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +51,15 @@ class SubjectAdapter extends TypeAdapter<Subject> {
       ..writeByte(6)
       ..write(obj.createdAt)
       ..writeByte(7)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(8)
+      ..write(obj.isSynced)
+      ..writeByte(9)
+      ..write(obj.isDeleted)
+      ..writeByte(10)
+      ..write(obj.status)
+      ..writeByte(11)
+      ..write(obj.hoursCompleted);
   }
 
   @override
