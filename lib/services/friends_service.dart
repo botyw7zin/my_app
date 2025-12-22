@@ -42,22 +42,29 @@ class FriendService {
   }
 
   /// ---------- FRIEND REQUESTS ----------
-
   Future<void> sendFriendRequest(String toUserId) async {
     final fromUserId = _uid;
     if (fromUserId == toUserId) {
       throw Exception("You can't add yourself");
     }
 
+    // Prevent sending if already friends
+    if (await isFriend(toUserId)) {
+      throw Exception('Already friends');
+    }
+
+    // Check most recent request status (top-level collection)
+    final recentStatus = await existingRequestStatus(toUserId);
+    if (recentStatus == 'pending' || recentStatus == 'accepted') {
+      throw Exception('Friend request already sent');
+    }
+
     // Load sender profile once to denormalize name + photo on the request
     final profile = await _currentUserProfile();
     final fromDisplayName = profile?['displayName'] as String? ?? '';
     final fromPhotoURL = profile?['photoURL'] as String?;
-    await _firestore
-        .collection('users')
-        .doc(toUserId)
-        .collection('friendRequests')
-        .add({
+
+    await _firestore.collection('friendRequests').add({
       'fromUserId': fromUserId,
       'toUserId': toUserId,
       'status': 'pending',
@@ -68,70 +75,62 @@ class FriendService {
   }
 
   Future<void> acceptFriendRequest(String requestId, String fromUserId) async {
-  final toUserId = _uid; // current (receiver)
-  final now = DateTime.now();
+    final toUserId = _uid; // current (receiver)
+    final now = DateTime.now();
 
-  // Load both users' profiles
-  final toUserDoc = await _firestore.collection('users').doc(toUserId).get();
-  final fromUserDoc = await _firestore.collection('users').doc(fromUserId).get();
+    // Load both users' profiles
+    final toUserDoc = await _firestore.collection('users').doc(toUserId).get();
+    final fromUserDoc = await _firestore.collection('users').doc(fromUserId).get();
 
-  final toData = toUserDoc.data() ?? {};
-  final fromData = fromUserDoc.data() ?? {};
+    final toData = toUserDoc.data() ?? {};
+    final fromData = fromUserDoc.data() ?? {};
 
-  final toDisplayName = (toData['displayName'] ?? '') as String;
-  final toPhotoURL = toData['photoURL'] as String?;
-  final fromDisplayName = (fromData['displayName'] ?? '') as String;
-  final fromPhotoURL = fromData['photoURL'] as String?;
+    final toDisplayName = (toData['displayName'] ?? '') as String;
+    final toPhotoURL = toData['photoURL'] as String?;
+    final fromDisplayName = (fromData['displayName'] ?? '') as String;
+    final fromPhotoURL = fromData['photoURL'] as String?;
 
-  final batch = _firestore.batch();
+    final batch = _firestore.batch();
 
-  final reqRef = _firestore
-      .collection('users')
-      .doc(toUserId)
-      .collection('friendRequests')
-      .doc(requestId);
+    final reqRef = _firestore.collection('friendRequests').doc(requestId);
 
-  // Mark request as accepted
-  batch.update(reqRef, {'status': 'accepted'});
+    // Mark request as accepted
+    batch.update(reqRef, {'status': 'accepted'});
 
-  // Add both sides friendship with denormalized data
-  final myFriendRef = _firestore
-      .collection('users')
-      .doc(toUserId)
-      .collection('friends')
-      .doc(fromUserId);
+    // Add both sides friendship with denormalized data
+    final myFriendRef = _firestore
+        .collection('users')
+        .doc(toUserId)
+        .collection('friends')
+        .doc(fromUserId);
 
-  final theirFriendRef = _firestore
-      .collection('users')
-      .doc(fromUserId)
-      .collection('friends')
-      .doc(toUserId);
+    final theirFriendRef = _firestore
+        .collection('users')
+        .doc(fromUserId)
+        .collection('friends')
+        .doc(toUserId);
 
-  batch.set(myFriendRef, {
-    'friendUserId': fromUserId,
-    'friendDisplayName': fromDisplayName,
-    'friendPhotoURL': fromPhotoURL,
-    'createdAt': now,
-  });
+    batch.set(myFriendRef, {
+      'friendUserId': fromUserId,
+      'friendDisplayName': fromDisplayName,
+      'friendPhotoURL': fromPhotoURL,
+      'createdAt': now,
+    });
 
-  batch.set(theirFriendRef, {
-    'friendUserId': toUserId,
-    'friendDisplayName': toDisplayName,
-    'friendPhotoURL': toPhotoURL,
-    'createdAt': now,
-  });
+    batch.set(theirFriendRef, {
+      'friendUserId': toUserId,
+      'friendDisplayName': toDisplayName,
+      'friendPhotoURL': toPhotoURL,
+      'createdAt': now,
+    });
 
-  await batch.commit();
-}
+    await batch.commit();
+  }
 
 
   Future<void> rejectFriendRequest(String requestId) async {
     final toUserId = _uid;
-    final reqRef = _firestore
-        .collection('users')
-        .doc(toUserId)
-        .collection('friendRequests')
-        .doc(requestId);
+    final reqRef = _firestore.collection('friendRequests').doc(requestId);
     await reqRef.update({'status': 'rejected'});
   }
 
@@ -173,10 +172,9 @@ class FriendService {
   Future<String?> existingRequestStatus(String otherUserId) async {
     final myId = _uid;
     final snap = await _firestore
-        .collection('users')
-        .doc(otherUserId)
         .collection('friendRequests')
         .where('fromUserId', isEqualTo: myId)
+        .where('toUserId', isEqualTo: otherUserId)
         .orderBy('createdAt', descending: true)
         .limit(1)
         .get();
@@ -190,12 +188,11 @@ class FriendService {
   Stream<QuerySnapshot<Map<String, dynamic>>> incomingRequestsStream() {
     final toUserId = _uid;
     return _firestore
-        .collection('users')
-        .doc(toUserId)
-        .collection('friendRequests')
-        .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+      .collection('friendRequests')
+      .where('toUserId', isEqualTo: toUserId)
+      .where('status', isEqualTo: 'pending')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> friendsStream() {

@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------
+    // Users collection & subs
+    // -----------------------
+    match /users/{userId} {
+      // Allow any logged-in user to read user docs (needed for search)
+      allow read: if request.auth != null;
+
+      // Only the owner can create/update/delete their own profile
+      allow create, update, delete: if request.auth != null
+                                    && request.auth.uid == userId;
+
+      // Subjects subcollection
+      match /subjects/{subjectId} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == userId;
+      }
+
+      // Friends subcollection (denormalized friendship edges)
+      match /friends/{friendId} {
+        // Owner can read/update/delete their own friends
+        allow read, update, delete: if request.auth != null
+                                    && request.auth.uid == userId;
+
+        // Either side of the friendship can create the edge
+        allow create: if request.auth != null
+                      && (request.auth.uid == userId
+                          || request.auth.uid == friendId);
+      }
+    }
+
+    // -----------------------------------
+    // Top-level friendRequests collection
+    // Each doc should include:
+    //   fromUserId: string (sender uid)
+    //   toUserId: string   (receiver uid)
+    //   status: string     ('pending'|'accepted'|'rejected'|'cancelled')
+    //   createdAt / updatedAt (optional server timestamps)
+    // -----------------------------------
+    match /friendRequests/{requestId} {
+      // Only sender may CREATE a request and must claim sender's uid
+      allow create: if request.auth != null
+                    // sender must be auth user
+                    && request.auth.uid == request.resource.data.fromUserId
+                    // cannot send to yourself
+                    && request.resource.data.fromUserId != request.resource.data.toUserId
+                    // basic status constraint for new requests (optional)
+                    && (request.resource.data.status is string
+                        && request.resource.data.status == 'pending');
+
+      // Allow reads for either the sender or the receiver
+      allow get: if request.auth != null
+                  && (request.auth.uid == resource.data.fromUserId
+                      || request.auth.uid == resource.data.toUserId);
+
+      // For queries (list) permit reading docs where the requester is either sender or receiver.
+      // This check is evaluated per-doc by Firestore.
+      allow list: if request.auth != null;
+
+      // Allow the receiver to accept/reject (update only status from pending -> accepted/rejected)
+      allow update: if request.auth != null
+                    // only receiver may change status
+                    && request.auth.uid == resource.data.toUserId
+                    // ensure original status was 'pending'
+                    && resource.data.status == 'pending'
+                    // ensure status becomes accepted or rejected only
+                    && (request.resource.data.status == 'accepted'
+                        || request.resource.data.status == 'rejected');
+
+      // Allow sender or receiver to delete the request (e.g., cancel or cleanup)
+      allow delete: if request.auth != null
+                    && (request.auth.uid == resource.data.fromUserId
+                        || request.auth.uid == resource.data.toUserId);
+    }
+
+    // studySessions collection rules
+    match /studySessions/{sessionId} {
+
+      // Allow read if authenticated and user is a participant
+      allow get, list: if request.auth != null && (request.auth.uid in resource.data.participantIds);
+
+      // Create: only authenticated users may create sessions where ownerId == auth.uid
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.participantIds is list
+        && (request.resource.data.participants[request.auth.uid] is map);
+
+      // Update: allow if owner or if the user is updating only their own participant entry
+      allow update: if request.auth != null && (
+        // Owner may modify the session (invite/remove participants, change status)
+        request.auth.uid == resource.data.ownerId
+        // OR participants may update their own entry (status, selectedSubjectId, displayName, photoURL)
+        || (request.auth.uid in resource.data.participantIds
+            && request.resource.data.participants[request.auth.uid] is map)
+      );
+
+      // Delete: only owner can delete
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

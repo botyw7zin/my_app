@@ -14,6 +14,7 @@ class BaseScreen extends StatelessWidget {
   final Color? appBarColor;
   final String currentScreen; // 'Home', 'Documents', 'People', 'Calendar'
   final bool automaticallyImplyLeading;
+  final Widget? leading;
 
   const BaseScreen({
     super.key,
@@ -23,6 +24,7 @@ class BaseScreen extends StatelessWidget {
     this.actions,
     this.appBarColor,
     this.automaticallyImplyLeading = false,
+    this.leading,
   });
 
   void _navigateToAddSubject(BuildContext context) {
@@ -79,6 +81,7 @@ class BaseScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       appBar: AppBar(
+        leading: leading,
         title: Text(title),
         backgroundColor: appBarColor ?? const Color(0xFF7550FF),
         automaticallyImplyLeading: automaticallyImplyLeading,

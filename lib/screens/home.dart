@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../widgets/base_screen.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
+import 'incoming_sessions_screen.dart';
+import 'user_settings_screen.dart';
+import '../services/subject_service.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,6 +17,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
+  final SubjectService _subjectService = SubjectService();
+  bool _isSyncing = false;
 
   void _show(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -28,9 +32,28 @@ class _HomeState extends State<Home> {
     }
   }
 
-  void _openUserSettings() {
-    _show('Settings coming soon');
+  Future<void> _syncNow() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    try {
+      await _subjectService.syncBothWays();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sync completed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
   }
+
+  // User settings are opened via the avatar tap; no extra helpers required.
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +77,21 @@ class _HomeState extends State<Home> {
 
                 return Row(
                   children: [
-                    // Profile picture
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF7550FF),
-                      backgroundImage: (photoURL.startsWith('http'))
-                          ? NetworkImage(photoURL)
-                          : const AssetImage('assets/images/cat.png')
-                              as ImageProvider,
+                    // Profile picture (tappable -> settings)
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UserSettingsScreen()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFF7550FF),
+                        backgroundImage: (photoURL.startsWith('http'))
+                            ? NetworkImage(photoURL)
+                            : const AssetImage('assets/images/cat.png') as ImageProvider,
+                      ),
                     ),
                     const SizedBox(width: 12),
 
@@ -105,6 +135,20 @@ class _HomeState extends State<Home> {
                         );
                       },
                     ),
+                    // Session invites icon
+                    IconButton(
+                      icon: const Icon(Icons.group, color: Colors.white),
+                      iconSize: 28,
+                      tooltip: 'Session Invites',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const IncomingSessionsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 );
               },
@@ -126,6 +170,17 @@ class _HomeState extends State<Home> {
         ),
       ),
       actions: [
+        IconButton(
+          icon: _isSyncing
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.sync, color: Colors.white),
+          tooltip: 'Sync Now',
+          onPressed: _isSyncing ? null : _syncNow,
+        ),
         IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
           tooltip: 'Sign Out',

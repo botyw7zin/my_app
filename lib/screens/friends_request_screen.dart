@@ -80,25 +80,56 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                       fontSize: 12,
                     ),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () async {
-                          await _friendService.rejectFriendRequest(requestId);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.check, color: Colors.green),
-                        onPressed: () async {
-                          await _friendService.acceptFriendRequest(
-                            requestId,
-                            fromUserId,
-                          );
-                        },
-                      ),
-                    ],
+                  trailing: FutureBuilder<bool>(
+                    future: _friendService.isFriend(fromUserId),
+                    builder: (context, snapFriend) {
+                      final alreadyFriend = snapFriend.data == true;
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () async {
+                              try {
+                                await _friendService.rejectFriendRequest(requestId);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Request rejected')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to reject: $e')),
+                                );
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.check, color: alreadyFriend ? Colors.grey : Colors.green),
+                            onPressed: alreadyFriend
+                                ? null
+                                : () async {
+                                    try {
+                                      await _friendService.acceptFriendRequest(
+                                        requestId,
+                                        fromUserId,
+                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Friend added')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Failed to accept: $e')),
+                                      );
+                                    }
+                                  },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               );
