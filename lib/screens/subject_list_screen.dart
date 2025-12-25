@@ -196,6 +196,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     try {
       if (isDone) {
         subject.hoursCompleted = 0.0;
+        subject.status = 'in progress';
         await _subjectService.updateSubject(subject);
 
         if (mounted) {
@@ -217,6 +218,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
         }
       } else {
         subject.hoursCompleted = subject.hourGoal.toDouble();
+        subject.status = 'done';
         await _subjectService.updateSubject(subject);
 
         if (mounted) {

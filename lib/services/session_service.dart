@@ -161,12 +161,37 @@ class SessionService {
     if (ownerId != null && ownerId == uid) {
       participants.remove(uid);
       participantIds.remove(uid);
+
+      // If no participants remain (no joined or invited users), close the session.
+      if (participantIds.isEmpty) {
+        final updateData = {
+          'participants': participants,
+          'participantIds': participantIds,
+          'ownerLeft': true,
+          'status': 'closed',
+          'closedAt': FieldValue.serverTimestamp(),
+        };
+        await docRef.update(updateData);
+        return;
+      }
+
+      // Otherwise transfer ownership to another participant so invites remain valid.
+      // Prefer a participant who is already 'joined', otherwise pick the first participantId.
+      String? newOwner;
+      for (final pid in participantIds) {
+        final info = participants[pid] as Map<String, dynamic>?;
+        if (info != null && (info['status'] as String? ?? '') == 'joined') {
+          newOwner = pid;
+          break;
+        }
+      }
+      newOwner ??= participantIds.first;
+
+      // Update the session document: set new owner, keep participants and ids intact.
       final updateData = {
         'participants': participants,
         'participantIds': participantIds,
-        'ownerLeft': true,
-        'status': 'closed',
-        'closedAt': FieldValue.serverTimestamp(),
+        'ownerId': newOwner,
       };
       await docRef.update(updateData);
       return;
@@ -220,12 +245,11 @@ class SessionService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> sessionsForUserStream() {
     final uid = _uid;
-    // Include sessions the user is a participant of, even if owner has left or session closed,
-    // so that invites or closed sessions can be surfaced in the UI with appropriate messaging.
+    // Include sessions the user is a participant of, across statuses,
+    // so invites remain visible even if the session was modified.
     return _firestore
         .collection('studySessions')
         .where('participantIds', arrayContains: uid)
-        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
