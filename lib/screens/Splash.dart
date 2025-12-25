@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/widgets/custom_button.dart';
 import 'package:my_app/widgets/background.dart';
+import 'package:my_app/services/subject_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -25,6 +26,17 @@ class _SplashPageState extends State<SplashPage> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // Ensure subject sync and connectivity listener are initialized for
+      // users that were already signed in when the app started.
+      try {
+        final subjectService = SubjectService();
+        await subjectService.syncBothWays();
+        subjectService.listenForConnectivityChanges();
+      } catch (e) {
+        // non-fatal: continue to home even if sync fails
+        debugPrint('>>> [Splash] Post-auth sync failed: $e');
+      }
+
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       setState(() {

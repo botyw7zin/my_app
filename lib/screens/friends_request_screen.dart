@@ -162,12 +162,24 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
                                                 if (chosen == null) return;
                                                 try {
+                                                  // Re-fetch session before joining to ensure it's still joinable
+                                                  final sessSnap = await _sessionService.sessionStream(s.id).first;
+                                                  final raw = await FirebaseFirestore.instance.collection('studySessions').doc(s.id).get();
+                                                  final data = raw.data() ?? {};
+                                                  final ownerLeft = data['ownerLeft'] as bool? ?? false;
+                                                  final status = (data['status'] ?? 'active') as String;
+                                                  if (ownerLeft || status != 'active') {
+                                                    if (!mounted) return;
+                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot join — the session owner has left or the session is closed')));
+                                                    return;
+                                                  }
+
                                                   await _session_service_joinSession(s.id, chosen);
                                                   if (!mounted) return;
                                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Joined session')));
                                                   final subj = _subjectService.getAllSubjects().firstWhere((x) => x.id == chosen);
                                                   if (!mounted) return;
-                                                  Navigator.push(context, MaterialPageRoute(builder: (_) => TimerSessionScreen(subject: subj, sessionId: s.id)));
+                                                  Navigator.push(context, MaterialPageRoute(builder: (_) => TimerSessionScreen(subject: subj, sessionId: s.id, startFromZero: true)));
                                                 } catch (e) {
                                                   if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to join: $e')));
                                                 }

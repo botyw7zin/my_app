@@ -448,7 +448,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                     ),
                   ),
                   Text(
-                    '${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hours',
+                    _formatProgressDisplay(subject.hoursCompleted, subject.hourGoal),
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 12,
@@ -605,6 +605,14 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
         ],
       ),
     );
+  }
+
+  String _formatProgressDisplay(double hoursCompleted, int hourGoal) {
+    if (hoursCompleted < 1.0) {
+      final minutes = (hoursCompleted * 60).round();
+      return '$minutes min/${hourGoal} hours';
+    }
+    return '${hoursCompleted.toStringAsFixed(1)}/${hourGoal} hours';
   }
 
   @override

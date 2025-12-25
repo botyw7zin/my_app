@@ -72,6 +72,15 @@ class SubjectCard extends StatelessWidget {
     return '${deadline.day}/${deadline.month}/${deadline.year}';
   }
 
+  String _formatProgressTime(double hours) {
+    if (hours < 1.0) {
+      final minutes = (hours * 60).round();
+      return '$minutes min';
+    }
+    // show one decimal hour when >= 1
+    return '${hours.toStringAsFixed(1)} hrs';
+  }
+
   double _getProgress() {
     if (subject.hourGoal <= 0) return 0;
     final value = (subject.hoursCompleted / subject.hourGoal).clamp(0.0, 1.0);
@@ -445,7 +454,7 @@ class SubjectCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hrs  ($progressPercent%)',
+                        '${_formatProgressTime(subject.hoursCompleted)}/${subject.hourGoal} hrs  ($progressPercent%)',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,

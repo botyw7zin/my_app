@@ -20,8 +20,9 @@ import '../widgets/background.dart'; // Import your new GlowyBackground file her
 class TimerSessionScreen extends StatefulWidget {
   final Subject subject;
   final String? sessionId;
+  final bool startFromZero;
 
-  const TimerSessionScreen({super.key, required this.subject, this.sessionId});
+  const TimerSessionScreen({super.key, required this.subject, this.sessionId, this.startFromZero = false});
 
   @override
   State<TimerSessionScreen> createState() => _TimerSessionScreenState();
@@ -44,14 +45,24 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.sessionId != null) {
         try {
-          final ss = await _sessionService.sessionStream(widget.sessionId!).first;
-          final now = DateTime.now();
-          final diff = now.difference(ss.createdAt).inSeconds;
-          if (mounted) {
-            setState(() {
-              _elapsedSeconds = diff > 0 ? diff : 0;
-              _sessionId = widget.sessionId;
-            });
+          if (widget.startFromZero) {
+            // When joining from an invite acceptance, start at 0 seconds.
+            if (mounted) {
+              setState(() {
+                _elapsedSeconds = 0;
+                _sessionId = widget.sessionId;
+              });
+            }
+          } else {
+            final ss = await _sessionService.sessionStream(widget.sessionId!).first;
+            final now = DateTime.now();
+            final diff = now.difference(ss.createdAt).inSeconds;
+            if (mounted) {
+              setState(() {
+                _elapsedSeconds = diff > 0 ? diff : 0;
+                _sessionId = widget.sessionId;
+              });
+            }
           }
         } catch (e) {
           debugPrint('>>> [TimerSession] Failed to load existing session: $e');

@@ -125,6 +125,12 @@ class SessionService {
     if (!snap.exists) throw Exception('Session not found');
 
     final data = snap.data() ?? {};
+    // Prevent joining if owner has left or session is no longer active
+    final ownerLeft = data['ownerLeft'] as bool? ?? false;
+    final status = (data['status'] ?? 'active') as String;
+    if (ownerLeft) throw Exception('The session owner has left. This session is closed.');
+    if (status != 'active') throw Exception('This session is no longer active.');
+
     final participants = Map<String, dynamic>.from(data['participants'] ?? {});
     participants[uid] = {
       'status': 'joined',
@@ -150,6 +156,23 @@ class SessionService {
     final participants = Map<String, dynamic>.from(data['participants'] ?? {});
     final participantIds = List<String>.from(data['participantIds'] ?? []);
 
+    // If the owner is leaving, mark the session as closed so others cannot join
+    final ownerId = data['ownerId'] as String?;
+    if (ownerId != null && ownerId == uid) {
+      participants.remove(uid);
+      participantIds.remove(uid);
+      final updateData = {
+        'participants': participants,
+        'participantIds': participantIds,
+        'ownerLeft': true,
+        'status': 'closed',
+        'closedAt': FieldValue.serverTimestamp(),
+      };
+      await docRef.update(updateData);
+      return;
+    }
+
+    // Regular participant leaving
     participants.remove(uid);
     participantIds.remove(uid);
 
@@ -163,10 +186,11 @@ class SessionService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> sessionsForUserStream() {
     final uid = _uid;
+    // Include sessions the user is a participant of, even if owner has left or session closed,
+    // so that invites or closed sessions can be surfaced in the UI with appropriate messaging.
     return _firestore
         .collection('studySessions')
         .where('participantIds', arrayContains: uid)
-        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots();
   }

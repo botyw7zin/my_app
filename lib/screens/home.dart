@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -7,6 +8,9 @@ import 'friends_request_screen.dart';
 import 'incoming_sessions_screen.dart';
 import 'user_settings_screen.dart';
 import '../services/subject_service.dart';
+import '../services/friends_service.dart';
+import '../services/session_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -19,6 +23,54 @@ class _HomeState extends State<Home> {
   final AuthService _authService = AuthService();
   final SubjectService _subjectService = SubjectService();
   bool _isSyncing = false;
+  final FriendService _friendService = FriendService();
+  final SessionService _sessionService = SessionService();
+  bool _hasNotifications = false;
+  bool _hasFriendRequests = false;
+  bool _hasSessionInvites = false;
+  StreamSubscription? _friendSub;
+  StreamSubscription? _sessionSub;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    // Listen for incoming friend requests
+    _friendSub = _friendService.incomingRequestsStream().listen((snap) {
+      final hasFriend = snap.docs.isNotEmpty;
+      if (mounted) {
+        setState(() {
+          _hasFriendRequests = hasFriend;
+          _hasNotifications = _hasFriendRequests || _hasSessionInvites;
+        });
+      }
+    });
+
+    // Listen for session invites for this user
+    _sessionSub = _sessionService.sessionsForUserStream().listen((snap) {
+      bool hasInvite = false;
+      final uidLocal = uid;
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        if (data == null) continue;
+        final participants = data['participants'] as Map<String, dynamic>?;
+        if (participants != null && uidLocal != null) {
+          final entry = participants[uidLocal] as Map<String, dynamic>?;
+          if (entry != null && entry['status'] == 'invited') {
+            hasInvite = true;
+            break;
+          }
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _hasSessionInvites = hasInvite;
+          _hasNotifications = _hasFriendRequests || _hasSessionInvites;
+        });
+      }
+    });
+  }
 
   void _show(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -54,6 +106,13 @@ class _HomeState extends State<Home> {
   }
 
   // User settings are opened via the avatar tap; no extra helpers required.
+
+  @override
+  void dispose() {
+    _friendSub?.cancel();
+    _sessionSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +182,9 @@ class _HomeState extends State<Home> {
                       ),
                     ),
 
-                    // --- ICON 1: Notifications ---
-                    IconButton(
-                      icon: const Icon(Icons.notifications, color: Colors.white),
-                      iconSize: 28,
-                      tooltip: 'Friend Requests',
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
+                    // --- ICON 1: Notifications (with unread dot) ---
+                    InkWell(
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -137,6 +192,26 @@ class _HomeState extends State<Home> {
                           ),
                         );
                       },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.notifications, color: Colors.white, size: 28),
+                          if (_hasNotifications)
+                            Positioned(
+                              right: 0,
+                              top: 4,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(width: 8),
