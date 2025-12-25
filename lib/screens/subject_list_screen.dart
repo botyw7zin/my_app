@@ -799,7 +799,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                                   'Subjects - projects',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 18,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

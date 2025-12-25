@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui'; // Needed for ImageFilter if referenced directly, though Glowy handles it
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,12 +14,12 @@ import '../services/session_service.dart';
 import '../services/friends_service.dart';
 
 // Widgets
-import '../widgets/base_screen.dart'; 
-import '../widgets/custom_button.dart'; 
+import '../widgets/custom_button.dart';
+import '../widgets/background.dart'; // Import your new GlowyBackground file here
 
 class TimerSessionScreen extends StatefulWidget {
   final Subject subject;
-  final String? sessionId; // optional: join existing session instead of creating
+  final String? sessionId;
 
   const TimerSessionScreen({super.key, required this.subject, this.sessionId});
 
@@ -30,7 +31,7 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
   final SubjectService _subjectService = SubjectService();
   final SessionService _sessionService = SessionService();
   final FriendService _friendService = FriendService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Added Firestore instance
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String? _sessionId;
   Timer? _ticker;
@@ -40,12 +41,8 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
   @override
   void initState() {
     super.initState();
-    // Start timer automatically when page opens. If joining an existing
-    // session, initialize the elapsed time based on the session's createdAt
-    // so we share the same timer as the owner.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.sessionId != null) {
-        // Joining existing session: fetch session once to compute elapsed
         try {
           final ss = await _sessionService.sessionStream(widget.sessionId!).first;
           final now = DateTime.now();
@@ -62,7 +59,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
         }
         _start();
       } else {
-        // Creating a new session as owner
         try {
           final id = await _sessionService.createSession(widget.subject.id);
           if (mounted) {
@@ -78,7 +74,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     });
   }
 
-  // --- Helper to load profile from Firestore (Same as Friends Screen) ---
   Future<Map<String, dynamic>?> _loadProfile() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return null;
@@ -92,7 +87,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     super.dispose();
   }
 
-  // --- Timer Logic ---
   void _start() {
     if (_running) return;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -129,7 +123,7 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     final s = seconds % 60;
-    
+
     if (h > 0) {
       return '${h.toString()}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
@@ -138,11 +132,11 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
 
   Future<void> _finishSession() async {
     _pause();
-    final minutes = _elapsedSeconds ~/ 60; 
+    final minutes = _elapsedSeconds ~/ 60;
 
     if (minutes == 0) {
-       Navigator.pop(context, false);
-       return;
+      Navigator.pop(context, false);
+      return;
     }
 
     final addedHours = minutes / 60.0;
@@ -162,17 +156,16 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     }
   }
 
-  // --- Invite Logic ---
   Future<void> _inviteFriend() async {
     if (_sessionId == null) return;
-    
+
     final subjects = _subjectService.getAllSubjects();
-    
+
     final selectedMap = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _InviteDialog(
-        subjects: subjects, 
-        friendService: _friendService
+        subjects: subjects,
+        friendService: _friendService,
       ),
     );
 
@@ -180,19 +173,16 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
 
     final selected = (selectedMap['selected'] ?? <String>[]) as List<String>;
     final suggestedId = selectedMap['suggested'] as String?;
-    final subjectMapForInvite = {for (var s in subjects) s.id: s.name};
-    final suggestedName = suggestedId == null ? null : subjectMapForInvite[suggestedId];
 
     if (selected.isNotEmpty) {
       try {
         await _sessionService.inviteParticipants(
-          _sessionId!, 
-          selected, 
-          suggestedSubjectId: suggestedId, 
-          suggestedSubjectName: suggestedName
+          _sessionId!,
+          selected,
+          suggestedSubjectId: suggestedId,
         );
         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitations sent')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitations sent')));
         }
       } catch (e) {
         if (mounted) {
@@ -204,214 +194,237 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BaseScreen(
-      title: '', 
-      showAppBar: false,
-      currentScreen: 'Timer', 
-      
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              
-              // --- 1. Header (UPDATED with FutureBuilder) ---
-              FutureBuilder<Map<String, dynamic>?>(
-                future: _loadProfile(),
-                builder: (context, snapshot) {
-                  final data = snapshot.data ?? {};
-                  // Fallback to "User" if name is missing
-                  final displayName = (data['displayName'] ?? 'User') as String;
-                  final photoURL = data['photoURL'] as String?;
+    // Replaced BaseScreen with Scaffold + Stack + GlowyBackground
+    return Scaffold(
+      backgroundColor: const Color(0xFF1F2232), // Solid dark background base
+      body: Stack(
+        children: [
+          // 1. The Glowy Background
+          const GlowyBackground(),
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+          // 2. The Content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // --- Header ---
+                  FutureBuilder<Map<String, dynamic>?>(
+                    future: _loadProfile(),
+                    builder: (context, snapshot) {
+                      final data = snapshot.data ?? {};
+                      final displayName = (data['displayName'] ?? 'User') as String;
+                      final photoURL = data['photoURL'] as String?;
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: const Color(0xFF7550FF),
-                            backgroundImage: (photoURL != null && photoURL.startsWith('http')) 
-                                ? NetworkImage(photoURL) 
-                                : const AssetImage('assets/images/cat.png') as ImageProvider,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
                             children: [
-                              const Text(
-                                "Hello!",
-                                style: TextStyle(
-                                  color: Colors.white
-                                , fontSize: 14,
-                                fontWeight:FontWeight.w400),
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: const Color(0xFF7550FF),
+                                backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                                    ? NetworkImage(photoURL)
+                                    : const AssetImage('assets/images/cat.png') as ImageProvider,
                               ),
-                              Text(
-                                displayName, // Using Firestore name
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Hello!",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                  Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
+                          IconButton(
+                            onPressed: () => _finishSession(),
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                          )
                         ],
-                      ),
-                      IconButton(
-                        onPressed: () => _finishSession(),
-                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                      )
-                    ],
-                  );
-                }
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // --- 2. Subject Title ---
-              const Text(
-                      'Concentration Session',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                      ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.subject.name.toLowerCase(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white, 
-                  fontSize: 22, 
-                  fontWeight: FontWeight.bold
-                ),
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // --- 3. Timer Box ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF363A4D),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    _fmt(_elapsedSeconds),
-                    style: const TextStyle(
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // --- Subject Title ---
+                  const Text(
+                    'Concentration Session:',
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 64,
+                      fontSize: 19, // Slightly smaller label
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 2,
                     ),
                   ),
-                ),
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // --- 4. Custom Buttons ---
-              CustomButton(
-                text: "ask a friend to join",
-                onPressed: _inviteFriend,
-                backgroundColor: const Color(0xFF7550FF),
-                width: double.infinity,
-                height: 55,
-                fontSize: 18,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              CustomButton(
-                text: _running ? "take a short rest" : "resume session",
-                onPressed: _toggleRest,
-                backgroundColor: _running ? const Color(0xFF7550FF) : Colors.orange,
-                width: double.infinity,
-                height: 55,
-                fontSize: 18,
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // --- 5. "Look who's here too" ---
-              const Align(
-                alignment: Alignment.center,
-                child: Text(
-                  "look who's here too",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400),
-                ),
-              ),
-              const SizedBox(height: 10),
-              
-              Expanded(
-                child: _sessionId == null 
-                  ? const SizedBox.shrink()
-                  : StreamBuilder<StudySession>(
-                      stream: _sessionService.sessionStream(_sessionId!),
-                      builder: (context, snap) {
-                        if (!snap.hasData) return const SizedBox.shrink();
-                        
-                        final ss = snap.data!;
-                        final currentUid = FirebaseAuth.instance.currentUser?.uid;
-                        final entries = ss.participants.entries
-                            .where((entry) => entry.key != currentUid)
-                            .toList();
-
-                        if (entries.isEmpty) {
-                          return const SizedBox.shrink(); 
-                        }
-
-                        return ListView.separated(
-                          itemCount: entries.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final info = Map<String, dynamic>.from(entries[index].value ?? {});
-                            final name = info['displayName'] as String? ?? 'Friend';
-                            final photo = info['photoURL'] as String?;
-                            
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white, 
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: Colors.grey[300],
-                                  backgroundImage: (photo != null && photo.startsWith('http'))
-                                    ? NetworkImage(photo)
-                                    : const AssetImage('assets/images/cat.png') as ImageProvider,
-                                ),
-                                title: Text(
-                                  name.toLowerCase(),
-                                  style: const TextStyle(
-                                    color: Colors.black, 
-                                    fontWeight: FontWeight.bold
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.subject.name.toLowerCase(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26, // Larger subject name
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // --- Timer Box ---
+                  // Added a backdrop filter or opacity to make timer readable over glow
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF363A4D).withOpacity(0.8), // Slightly transparent
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _fmt(_elapsedSeconds),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 64,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2,
+                          fontFeatures: [FontFeature.tabularFigures()], // Keeps numbers from jumping
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // --- Buttons ---
+                  CustomButton(
+                    text: "ask a friend to join",
+                    onPressed: _inviteFriend,
+                    backgroundColor: const Color(0xFF7550FF),
+                    width: double.infinity,
+                    height: 55,
+                    fontSize: 18,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  CustomButton(
+                    text: _running ? "take a short rest" : "resume session",
+                    onPressed: _toggleRest,
+                    backgroundColor: _running ? const Color(0xFF7550FF) : Colors.orange,
+                    width: double.infinity,
+                    height: 55,
+                    fontSize: 18,
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // --- Participants List ---
+                  Expanded(
+                    child: _sessionId == null
+                        ? const SizedBox.shrink()
+                        : StreamBuilder<StudySession>(
+                            stream: _sessionService.sessionStream(_sessionId!),
+                            builder: (context, snap) {
+                              if (!snap.hasData) return const SizedBox.shrink();
+
+                              final ss = snap.data!;
+                              final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                              final entries = ss.participants.entries
+                                  .where((entry) {
+                                    if (entry.key == currentUid) return false;
+                                    final info = entry.value as Map<String, dynamic>?;
+                                    if (info == null) return false;
+                                    final status = (info['status'] ?? '') as String;
+                                    return status == 'joined';
+                                  })
+                                  .toList();
+
+                              if (entries.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      "look who's here too",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      itemCount: entries.length,
+                                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                      itemBuilder: (context, index) {
+                                        final info = Map<String, dynamic>.from(entries[index].value ?? {});
+                                        final name = info['displayName'] as String? ?? 'Friend';
+                                        final photo = info['photoURL'] as String?;
+
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.95),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: ListTile(
+                                            leading: CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: Colors.grey[300],
+                                              backgroundImage: (photo != null && photo.startsWith('http'))
+                                                  ? NetworkImage(photo)
+                                                  : const AssetImage('assets/images/cat.png') as ImageProvider,
+                                            ),
+                                            title: Text(
+                                              name.toLowerCase(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// --- Helper Dialog for Invites (Unchanged) ---
+// --- Invite Dialog (Kept exactly as you had it) ---
 class _InviteDialog extends StatefulWidget {
   final List<Subject> subjects;
   final FriendService friendService;
@@ -442,20 +455,24 @@ class _InviteDialogState extends State<_InviteDialog> {
               isExpanded: true,
               hint: const Text('Suggested subject (optional)', style: TextStyle(color: Colors.white70)),
               items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('No suggestion', style: TextStyle(color: Colors.white70))),
-                ...widget.subjects.map((s) => DropdownMenuItem<String?>(value: s.id, child: Text(s.name, style: const TextStyle(color: Colors.white)))),
+                const DropdownMenuItem<String?>(
+                    value: null, child: Text('No suggestion', style: TextStyle(color: Colors.white70))),
+                ...widget.subjects.map((s) => DropdownMenuItem<String?>(
+                    value: s.id, child: Text(s.name, style: const TextStyle(color: Colors.white)))),
               ],
               onChanged: (v) => setState(() => _suggestedSubjectId = v),
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: widget.friendService.friendsStream(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                   final docs = snapshot.data!.docs;
-                  if (docs.isEmpty) return const Center(child: Text('No friends found', style: TextStyle(color: Colors.white70)));
-                  
+                  if (docs.isEmpty) {
+                    return const Center(child: Text('No friends found', style: TextStyle(color: Colors.white70)));
+                  }
+
                   return ListView.builder(
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
@@ -463,17 +480,20 @@ class _InviteDialogState extends State<_InviteDialog> {
                       final fid = docs[index].id;
                       final fname = (d['friendDisplayName'] ?? fid) as String;
                       final selectedFlag = _toSelect.contains(fid);
-                      
+
                       return ListTile(
                         title: Text(fname, style: const TextStyle(color: Colors.white)),
                         trailing: Checkbox(
-                          value: selectedFlag, 
+                          value: selectedFlag,
                           activeColor: const Color(0xFF7550FF),
                           side: const BorderSide(color: Colors.white54),
-                          onChanged: (v) { 
-                            if (v == true) _toSelect.add(fid); 
-                            else _toSelect.remove(fid); 
-                            setState(() {}); 
+                          onChanged: (v) {
+                            if (v == true) {
+                              _toSelect.add(fid);
+                            } else {
+                              _toSelect.remove(fid);
+                            }
+                            setState(() {});
                           },
                         ),
                       );
@@ -486,12 +506,14 @@ class _InviteDialogState extends State<_InviteDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
+        TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7550FF)),
-          onPressed: () => Navigator.pop(context, {'selected': _toSelect.toList(), 'suggested': _suggestedSubjectId}), 
-          child: const Text('Invite', style: TextStyle(color: Colors.white))
-        ),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7550FF)),
+            onPressed: () =>
+                Navigator.pop(context, {'selected': _toSelect.toList(), 'suggested': _suggestedSubjectId}),
+            child: const Text('Invite', style: TextStyle(color: Colors.white))),
       ],
     );
   }
