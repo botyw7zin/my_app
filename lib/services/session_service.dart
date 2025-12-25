@@ -179,6 +179,40 @@ class SessionService {
     await docRef.update({'participants': participants, 'participantIds': participantIds});
   }
 
+  /// Close a session (typically called by the owner when finishing).
+  /// Marks session as closed and updates participant statuses to 'ended'.
+  Future<void> closeSession(String sessionId) async {
+    final uid = _uid;
+    final docRef = _firestore.collection('studySessions').doc(sessionId);
+    final snap = await docRef.get();
+    if (!snap.exists) throw Exception('Session not found');
+
+    final data = snap.data() ?? {};
+    final ownerId = data['ownerId'] as String?;
+    if (ownerId == null) throw Exception('Session owner not found');
+    if (ownerId != uid) throw Exception('Only the owner can close the session');
+
+    final participants = Map<String, dynamic>.from(data['participants'] ?? {});
+    // Mark all joined participants as 'ended'
+    for (final key in participants.keys.toList()) {
+      final entry = Map<String, dynamic>.from(participants[key] ?? {});
+      final status = (entry['status'] ?? '') as String;
+      if (status == 'joined' || status == 'invited') {
+        entry['status'] = 'ended';
+        participants[key] = entry;
+      }
+    }
+
+    final updateData = {
+      'participants': participants,
+      'status': 'closed',
+      'ownerLeft': true,
+      'closedAt': FieldValue.serverTimestamp(),
+    };
+
+    await docRef.update(updateData);
+  }
+
   Stream<StudySession> sessionStream(String sessionId) {
     final docRef = _firestore.collection('studySessions').doc(sessionId);
     return docRef.snapshots().map((doc) => StudySession.fromDoc(doc));
