@@ -18,8 +18,9 @@ import '../widgets/custom_button.dart';
 
 class TimerSessionScreen extends StatefulWidget {
   final Subject subject;
+  final String? sessionId; // optional: join existing session instead of creating
 
-  const TimerSessionScreen({super.key, required this.subject});
+  const TimerSessionScreen({super.key, required this.subject, this.sessionId});
 
   @override
   State<TimerSessionScreen> createState() => _TimerSessionScreenState();
@@ -39,20 +40,25 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
   @override
   void initState() {
     super.initState();
-    // No need to load local user info manually here, FutureBuilder handles it.
-    
     // Start timer automatically when page opens
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _start();
-      try {
-        final id = await _sessionService.createSession(widget.subject.id);
-        if (mounted) {
-          setState(() {
-            _sessionId = id;
-          });
+
+      // If a sessionId was provided, join that session quietly by setting
+      // local session id; otherwise create a new session as before.
+      if (widget.sessionId != null) {
+        setState(() => _sessionId = widget.sessionId);
+      } else {
+        try {
+          final id = await _sessionService.createSession(widget.subject.id);
+          if (mounted) {
+            setState(() {
+              _sessionId = id;
+            });
+          }
+        } catch (e) {
+          debugPrint('>>> [TimerSession] Failed to create session: $e');
         }
-      } catch (e) {
-        debugPrint('>>> [TimerSession] Failed to create session: $e');
       }
     });
   }
