@@ -5,10 +5,11 @@ import 'package:hive/hive.dart';
 import '../models/subject_model.dart';
 import '../widgets/subject_card.dart';
 import '../services/subject_service.dart';
+import '../services/friends_service.dart'; 
 import 'update_subject.dart';
 import '../widgets/base_screen.dart';
 import 'home.dart';
-import 'timer_session_screen.dart';
+import 'friends_request_screen.dart'; 
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -23,6 +24,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _lastOfMonth;
   late DateTime _selected;
 
+  final SubjectService _subjectService = SubjectService();
+  final FriendService _friendService = FriendService(); 
+
   @override
   void initState() {
     super.initState();
@@ -31,8 +35,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _lastOfMonth = DateTime(_today.year, _today.month + 1, 0);
     _selected = DateTime(_today.year, _today.month, _today.day);
   }
-
-  final SubjectService _subjectService = SubjectService();
 
   List<DateTime> _daysInMonth() {
     final days = <DateTime>[];
@@ -44,6 +46,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   DateTime _startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
   DateTime _endOfDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
+
+  void _navigateToNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FriendRequestsScreen()),
+    );
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _subjectsForSelectedDay() {
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -59,7 +68,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .snapshots();
   }
 
-  // Build local list for selected day using Hive
   List<Subject> _localSubjectsForSelectedDay() {
     final all = _subjectService.getAllSubjects();
     final start = _startOfDay(_selected);
@@ -76,30 +84,79 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final days = _daysInMonth();
 
     return BaseScreen(
-      title: '${_today.year} - ${_today.month.toString().padLeft(2, '0')}',
+      title: 'Calendar', 
+      showAppBar: false, 
       currentScreen: 'Calendar',
-      appBarColor: const Color(0xFF2C2F3E),
-      automaticallyImplyLeading: false,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-          // Ensure we navigate back to Home as a clean route stack
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const Home()),
-            (route) => false,
-          );
-        },
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-          onPressed: () {},
-        ),
-      ],
+      
       body: Column(
         children: [
+          const SizedBox(height: 10), 
+          
+          // --- CUSTOM HEADER ---
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Back Button
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const Home()),
+                      (route) => false,
+                    );
+                  },
+                ),
+                // Today's Date Text
+                Text(
+                  '${_today.year} - ${_today.month.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600, 
+                  ),
+                ),
+                
+                // --- NOTIFICATION BUTTON ---
+                Stack(
+                  children: [
+                    IconButton(
+                      // CHANGED: Use Icons.notifications for the filled bell icon
+                      icon: const Icon(Icons.notifications, color: Colors.white),
+                      onPressed: _navigateToNotifications, 
+                    ),
+                    // Red Dot Indicator
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: _friendService.incomingRequestsStream(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                            return Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF7550FF), 
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          }
+                          return const SizedBox(); 
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
           const SizedBox(height: 12),
+          
+          // --- Horizontal Day List ---
           SizedBox(
             height: 80,
             child: ListView.separated(
@@ -160,7 +217,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               },
             ),
           ),
+          
           const SizedBox(height: 12),
+          
+          // --- Content List ---
           Expanded(
             child: FutureBuilder<bool>(
               future: _subjectService.isOnline(),
@@ -174,7 +234,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 }
 
                 if (online) {
-                  // Online: use Firestore live stream
                   return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: _subjectsForSelectedDay(),
                     builder: (context, snapshot) {
@@ -188,7 +247,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         return const Center(
                           child: Text(
                             'No subjects due on this day',
-                            style: TextStyle(color: Colors.white70),
+                            style: TextStyle(color: Colors.white70,fontWeight:FontWeight.w400 ),
                           ),
                         );
                       }
@@ -201,7 +260,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           final doc = docs[index];
                           final data = doc.data();
 
-                          // Convert Firestore document to Subject model (best-effort)
                           DateTime? deadline;
                           final rawDeadline = data['deadline'];
                           if (rawDeadline is Timestamp) {
@@ -239,9 +297,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   final local = box.get(subject.id);
                                   if (local != null) {
                                     await _subjectService.deleteSubject(local);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Marked subject for deletion')),
-                                    );
+                                    if(mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Marked subject for deletion')),
+                                      );
+                                    }
                                     return;
                                   }
                                 }
@@ -253,13 +313,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     .collection('subjects')
                                     .doc(subject.id)
                                     .delete();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Subject deleted')),
-                                );
+                                if(mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Subject deleted')),
+                                  );
+                                }
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error deleting subject: $e')),
-                                );
+                                if(mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error deleting subject: $e')),
+                                  );
+                                }
                               }
                             },
                             onUpdate: () async {
@@ -287,9 +351,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 );
                                 if (res == true && mounted) setState(() {});
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error opening update: $e')),
-                                );
+                                if(mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error opening update: $e')),
+                                  );
+                                }
                               }
                             },
                             onMarkAsDone: () async {
@@ -320,9 +386,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     .update({'status': 'done'});
                                 if (mounted) setState(() {});
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error updating status: $e')),
-                                );
+                                if(mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error updating status: $e')),
+                                  );
+                                }
                               }
                             },
                           );
@@ -331,7 +399,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     },
                   );
                 } else {
-                  // Offline: use local Hive subjects
                   final localList = _localSubjectsForSelectedDay();
                   if (localList.isEmpty) {
                     return const Center(
@@ -354,14 +421,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         onDelete: () async {
                           try {
                             await _subjectService.deleteSubject(subject);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Marked subject for deletion (offline)')),
-                            );
-                            if (mounted) setState(() {});
+                            if(mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Marked subject for deletion (offline)')),
+                              );
+                              setState(() {});
+                            }
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error deleting subject: $e')),
-                            );
+                            if(mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error deleting subject: $e')),
+                              );
+                            }
                           }
                         },
                         onUpdate: () async {
@@ -374,9 +445,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             );
                             if (res == true && mounted) setState(() {});
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error opening update: $e')),
-                            );
+                            if(mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error opening update: $e')),
+                              );
+                            }
                           }
                         },
                         onMarkAsDone: () async {
@@ -390,9 +463,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             }
                             if (mounted) setState(() {});
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error updating status: $e')),
-                            );
+                            if(mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error updating status: $e')),
+                              );
+                            }
                           }
                         },
                       );

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../services/auth_service.dart';
+import '../widgets/base_screen.dart';
+import '../widgets/custom_button.dart';
 
 class UserSettingsScreen extends StatefulWidget {
   const UserSettingsScreen({super.key});
@@ -146,31 +148,136 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     final displayName = (box.get('displayName') ?? '') as String;
     final photoURL = (box.get('photoURL') ?? 'assets/images/cat.png') as String;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('User Settings'), backgroundColor: const Color(0xFF2C2F3E)),
-      backgroundColor: const Color(0xFF1F2130),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GestureDetector(
-              onTap: _updatePhoto,
-              child: CircleAvatar(
-                radius: 48,
-                backgroundImage: (photoURL.startsWith('http')) ? NetworkImage(photoURL) : AssetImage(photoURL) as ImageProvider,
-                backgroundColor: const Color(0xFF7550FF),
+    return BaseScreen(
+      title: 'User Settings',
+      currentScreen: 'People',
+      automaticallyImplyLeading: true,
+      appBarColor: Colors.transparent,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              // Avatar centered
+              Center(
+                child: GestureDetector(
+                  onTap: _updatePhoto,
+                  child: CircleAvatar(
+                    radius: 80,
+                    backgroundImage: (photoURL.startsWith('http')) ? NetworkImage(photoURL) : AssetImage(photoURL) as ImageProvider,
+                    backgroundColor: const Color(0xFF7550FF),
+                  ),
+                ),
               ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  displayName,
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 26),
+
+              // Settings header
+              const Padding(
+                padding: EdgeInsets.only(left: 6.0, bottom: 12.0),
+                child: Text(
+                  'Settings and Privacy',
+                  style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+
+              // Buttons area - center constrained width
+              Center(
+                child: Column(
+                  children: [
+                    _OutlineActionButton(
+                      text: 'Change Username',
+                      color: const Color(0xFF46BDF0),
+                      onTap: _updateUsername,
+                    ),
+                    const SizedBox(height: 12),
+                    _OutlineActionButton(
+                      text: 'Change E-mail',
+                      color: const Color(0xFF5EE0B8),
+                      onTap: _updateEmail,
+                    ),
+                    const SizedBox(height: 12),
+                    _OutlineActionButton(
+                      text: 'Change password',
+                      color: const Color(0xFF7A6BFF),
+                      onTap: _changePassword,
+                    ),
+                  ],
+                ),
+              ),
+
+              const Spacer(),
+
+              // Logout button centered with shadow
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 18.0),
+                  child: SizedBox(
+                    width: 260,
+                    child: CustomButton(
+                      text: 'Logout',
+                      onPressed: () => _authService.signOut(context),
+                      width: double.infinity,
+                      height: 56,
+                      fontSize: 18,
+                      backgroundColor: const Color(0xFF7550FF),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// Small styled outlined button used on settings page
+class _OutlineActionButton extends StatelessWidget {
+  final String text;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _OutlineActionButton({required this.text, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 320,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: color.withOpacity(0.9), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.18),
+              blurRadius: 12,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
             ),
-            const SizedBox(height: 12),
-            Center(child: Text(displayName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: _updateUsername, child: const Text('Change Username')),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _updateEmail, child: const Text('Change Email')),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _changePassword, child: const Text('Change Password')),
           ],
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

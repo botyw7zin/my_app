@@ -1,14 +1,20 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+// Models
 import '../models/subject_model.dart';
 import '../models/study_session_model.dart';
+
+// Services
 import '../services/subject_service.dart';
 import '../services/session_service.dart';
 import '../services/friends_service.dart';
+
+// Widgets
+import '../widgets/base_screen.dart'; 
+import '../widgets/custom_button.dart'; 
 
 class TimerSessionScreen extends StatefulWidget {
   final Subject subject;
@@ -21,15 +27,43 @@ class TimerSessionScreen extends StatefulWidget {
 
 class _TimerSessionScreenState extends State<TimerSessionScreen> {
   final SubjectService _subjectService = SubjectService();
-
   final SessionService _sessionService = SessionService();
   final FriendService _friendService = FriendService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Added Firestore instance
 
   String? _sessionId;
-
   Timer? _ticker;
   int _elapsedSeconds = 0;
   bool _running = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // No need to load local user info manually here, FutureBuilder handles it.
+    
+    // Start timer automatically when page opens
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _start();
+      try {
+        final id = await _sessionService.createSession(widget.subject.id);
+        if (mounted) {
+          setState(() {
+            _sessionId = id;
+          });
+        }
+      } catch (e) {
+        debugPrint('>>> [TimerSession] Failed to create session: $e');
+      }
+    });
+  }
+
+  // --- Helper to load profile from Firestore (Same as Friends Screen) ---
+  Future<Map<String, dynamic>?> _loadProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.data();
+  }
 
   @override
   void dispose() {
@@ -37,12 +71,15 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     super.dispose();
   }
 
+  // --- Timer Logic ---
   void _start() {
     if (_running) return;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        _elapsedSeconds++;
-      });
+      if (mounted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
     });
     setState(() => _running = true);
   }
@@ -53,297 +90,388 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
     setState(() => _running = false);
   }
 
-  void _reset() {
-    _pause();
-    setState(() => _elapsedSeconds = 0);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // start automatically when the page opens
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+  void _toggleRest() {
+    if (_running) {
+      _pause();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Timer paused for a break'), duration: Duration(seconds: 1)),
+      );
+    } else {
       _start();
-      try {
-        final id = await _sessionService.createSession(widget.subject.id);
-        setState(() {
-          _sessionId = id;
-        });
-      } catch (e) {
-        print('>>> [TimerSession] Failed to create session: $e');
-      }
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Resuming session'), duration: Duration(seconds: 1)),
+      );
+    }
   }
 
   String _fmt(int seconds) {
-    final mm = (seconds ~/ 60).toString().padLeft(2, '0');
-    final ss = (seconds % 60).toString().padLeft(2, '0');
-    return '$mm:$ss';
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    
+    if (h > 0) {
+      return '${h.toString()}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   Future<void> _finishSession() async {
     _pause();
-    final minutes = _elapsedSeconds ~/ 60; // integer minutes
+    final minutes = _elapsedSeconds ~/ 60; 
+
     if (minutes == 0) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session was less than 1 minute — nothing added.')));
-      Navigator.pop(context, false);
-      return;
+       Navigator.pop(context, false);
+       return;
     }
 
-    final addedHours = minutes / 60.0; // fractional hours based on minutes
+    final addedHours = minutes / 60.0;
 
     try {
       await _subjectService.addStudyHours(widget.subject, addedHours);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Added $minutes minute(s) (${addedHours.toStringAsFixed(2)} hrs) to "${widget.subject.name}"')),
+        SnackBar(content: Text('Added $minutes min to "${widget.subject.name}"')),
       );
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add study time: $e')),
+        SnackBar(content: Text('Failed to save: $e')),
       );
+    }
+  }
+
+  // --- Invite Logic ---
+  Future<void> _inviteFriend() async {
+    if (_sessionId == null) return;
+    
+    final subjects = _subjectService.getAllSubjects();
+    
+    final selectedMap = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _InviteDialog(
+        subjects: subjects, 
+        friendService: _friendService
+      ),
+    );
+
+    if (selectedMap == null) return;
+
+    final selected = (selectedMap['selected'] ?? <String>[]) as List<String>;
+    final suggestedId = selectedMap['suggested'] as String?;
+    final subjectMapForInvite = {for (var s in subjects) s.id: s.name};
+    final suggestedName = suggestedId == null ? null : subjectMapForInvite[suggestedId];
+
+    if (selected.isNotEmpty) {
+      try {
+        await _sessionService.inviteParticipants(
+          _sessionId!, 
+          selected, 
+          suggestedSubjectId: suggestedId, 
+          suggestedSubjectName: suggestedName
+        );
+        if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitations sent')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to invite: $e')));
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final subject = widget.subject;
+    return BaseScreen(
+      title: '', 
+      showAppBar: false,
+      currentScreen: 'Timer', 
+      
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              
+              // --- 1. Header (UPDATED with FutureBuilder) ---
+              FutureBuilder<Map<String, dynamic>?>(
+                future: _loadProfile(),
+                builder: (context, snapshot) {
+                  final data = snapshot.data ?? {};
+                  // Fallback to "User" if name is missing
+                  final displayName = (data['displayName'] ?? 'User') as String;
+                  final photoURL = data['photoURL'] as String?;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Timer — ${subject.name}'),
-        backgroundColor: const Color(0xFF2C2F3E),
-      ),
-      backgroundColor: const Color(0xFF1F2130),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 12),
-            Text(
-              subject.name,
-              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subject.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            // Participants area
-            if (_sessionId != null)
-              StreamBuilder<StudySession>(
-                stream: _sessionService.sessionStream(_sessionId!),
-                builder: (context, snap) {
-                  if (!snap.hasData) return const SizedBox.shrink();
-                  final ss = snap.data!;
-                  final entries = ss.participants.entries.toList();
-                  final allSubjects = _subjectService.getAllSubjects();
-                  final subjectMap = {for (var s in allSubjects) s.id: s.name};
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Participants', style: TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 120,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: entries.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final uid = entries[index].key;
-                            final info = Map<String, dynamic>.from(entries[index].value ?? {});
-                            final dn = info['displayName'] as String?;
-                            final status = info['status'] as String? ?? 'invited';
-                            final selected = info['selectedSubjectId'] as String?;
-
-                            final name = (dn != null && dn.isNotEmpty)
-                                ? dn
-                                : (uid == FirebaseAuth.instance.currentUser?.uid ? 'You' : 'Friend');
-
-                            String? photo = info['photoURL'] as String?;
-                            if (photo == null && uid == FirebaseAuth.instance.currentUser?.uid) {
-                              try {
-                                final box = Hive.box('userBox');
-                                photo = box.get('photoURL') as String?;
-                              } catch (_) {}
-                            }
-
-                            final effectiveImage = (photo != null && photo.startsWith('http')) ? NetworkImage(photo) : const AssetImage('assets/images/cat.png');
-
-                            return Container(
-                              width: 200,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white12,
-                                borderRadius: BorderRadius.circular(12),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: const Color(0xFF7550FF),
+                            backgroundImage: (photoURL != null && photoURL.startsWith('http')) 
+                                ? NetworkImage(photoURL) 
+                                : const AssetImage('assets/images/cat.png') as ImageProvider,
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Hello!",
+                                style: TextStyle(
+                                  color: Colors.white
+                                , fontSize: 14,
+                                fontWeight:FontWeight.w400),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      CircleAvatar(
-                                        backgroundColor: Colors.deepPurple,
-                                        backgroundImage: effectiveImage as ImageProvider,
-                                        radius: 26,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                      ),
-                                    ],
+                              Text(
+                                displayName, // Using Firestore name
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => _finishSession(),
+                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      )
+                    ],
+                  );
+                }
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // --- 2. Subject Title ---
+              const Text(
+                      'Concentration Session',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.subject.name.toLowerCase(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontSize: 22, 
+                  fontWeight: FontWeight.bold
+                ),
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // --- 3. Timer Box ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF363A4D),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Center(
+                  child: Text(
+                    _fmt(_elapsedSeconds),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 64,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // --- 4. Custom Buttons ---
+              CustomButton(
+                text: "ask a friend to join",
+                onPressed: _inviteFriend,
+                backgroundColor: const Color(0xFF7550FF),
+                width: double.infinity,
+                height: 55,
+                fontSize: 18,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              CustomButton(
+                text: _running ? "take a short rest" : "resume session",
+                onPressed: _toggleRest,
+                backgroundColor: _running ? const Color(0xFF7550FF) : Colors.orange,
+                width: double.infinity,
+                height: 55,
+                fontSize: 18,
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // --- 5. "Look who's here too" ---
+              const Align(
+                alignment: Alignment.center,
+                child: Text(
+                  "look who's here too",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400),
+                ),
+              ),
+              const SizedBox(height: 10),
+              
+              Expanded(
+                child: _sessionId == null 
+                  ? const SizedBox.shrink()
+                  : StreamBuilder<StudySession>(
+                      stream: _sessionService.sessionStream(_sessionId!),
+                      builder: (context, snap) {
+                        if (!snap.hasData) return const SizedBox.shrink();
+                        
+                        final ss = snap.data!;
+                        final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                        final entries = ss.participants.entries
+                            .where((entry) => entry.key != currentUid)
+                            .toList();
+
+                        if (entries.isEmpty) {
+                          return const SizedBox.shrink(); 
+                        }
+
+                        return ListView.separated(
+                          itemCount: entries.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final info = Map<String, dynamic>.from(entries[index].value ?? {});
+                            final name = info['displayName'] as String? ?? 'Friend';
+                            final photo = info['photoURL'] as String?;
+                            
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white, 
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: (photo != null && photo.startsWith('http'))
+                                    ? NetworkImage(photo)
+                                    : const AssetImage('assets/images/cat.png') as ImageProvider,
+                                ),
+                                title: Text(
+                                  name.toLowerCase(),
+                                  style: const TextStyle(
+                                    color: Colors.black, 
+                                    fontWeight: FontWeight.bold
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text('Status: $status', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                                  Text('Subject: ${selected != null ? (subjectMap[selected] ?? 'Unknown subject') : 'Not selected'}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                                ],
+                                ),
                               ),
                             );
                           },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                  );
-                },
-              ),
-            const SizedBox(height: 8),
-            // Invite friends button
-            if (_sessionId != null)
-              ElevatedButton.icon(
-                onPressed: () async {
-                  final subjects = _subjectService.getAllSubjects();
-                  final selectedMap = await showDialog<Map<String, dynamic>>(
-                    context: context,
-                    builder: (context) {
-                      final toSelect = <String>{};
-                      String? suggestedSubjectId;
-                      return StatefulBuilder(builder: (context, setState) {
-                        return AlertDialog(
-                          backgroundColor: const Color(0xFF363A4D),
-                          title: const Text('Invite Friends', style: TextStyle(color: Colors.white)),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            height: 360,
-                            child: Column(
-                              children: [
-                                // Optional suggested subject for all invites
-                                DropdownButton<String?>(
-                                  value: suggestedSubjectId,
-                                  dropdownColor: const Color(0xFF363A4D),
-                                  hint: const Text('Suggested subject (optional)', style: TextStyle(color: Colors.white70)),
-                                  items: [
-                                    const DropdownMenuItem<String?>(value: null, child: Text('No suggestion', style: TextStyle(color: Colors.white70))),
-                                    ...subjects.map((s) => DropdownMenuItem<String?>(value: s.id, child: Text(s.name, style: const TextStyle(color: Colors.white)))),
-                                  ],
-                                  onChanged: (v) => setState(() => suggestedSubjectId = v),
-                                ),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                                    stream: _friendService.friendsStream(),
-                                    builder: (context, snapshot) {
-                                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                                      final docs = snapshot.data!.docs;
-                                      if (docs.isEmpty) return const Center(child: Text('No friends', style: TextStyle(color: Colors.white70)));
-                                      return ListView.builder(
-                                        itemCount: docs.length,
-                                        itemBuilder: (context, index) {
-                                          final d = docs[index].data();
-                                          final fid = docs[index].id;
-                                          final fname = (d['friendDisplayName'] ?? fid) as String;
-                                          final fphoto = d['friendPhotoURL'] as String?;
-                                          final selectedFlag = toSelect.contains(fid);
-                                          return ListTile(
-                                            leading: CircleAvatar(backgroundImage: (fphoto != null && fphoto.startsWith('http')) ? NetworkImage(fphoto) : null, backgroundColor: Colors.deepPurple),
-                                            title: Text(fname, style: const TextStyle(color: Colors.white)),
-                                            trailing: Checkbox(value: selectedFlag, onChanged: (v) { if (v==true) toSelect.add(fid); else toSelect.remove(fid); setState(() {}); }),
-                                            onTap: () { if (toSelect.contains(fid)) toSelect.remove(fid); else toSelect.add(fid); setState(() {}); },
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context, <String, dynamic>{}), child: const Text('Cancel')),
-                            ElevatedButton(onPressed: () => Navigator.pop(context, {'selected': toSelect.toList(), 'suggested': suggestedSubjectId}), child: const Text('Invite')),
-                          ],
                         );
-                      });
-                    },
-                  );
-
-                  final selected = (selectedMap?['selected'] ?? <String>[]) as List<String>;
-                  final suggestedId = selectedMap?['suggested'] as String?;
-                  final subjectMapForInvite = {for (var s in subjects) s.id: s.name};
-                  final suggestedName = suggestedId == null ? null : subjectMapForInvite[suggestedId];
-
-                  if (selected.isNotEmpty) {
-                    try {
-                      await _sessionService.inviteParticipants(_sessionId!, selected, suggestedSubjectId: suggestedId, suggestedSubjectName: suggestedName);
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitations sent')));
-                    } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to invite: $e')));
-                    }
-                  }
-                },
-                icon: const Icon(Icons.person_add),
-                label: const Text('Invite Friends'),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7550FF)),
+                      },
+                    ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- Helper Dialog for Invites (Unchanged) ---
+class _InviteDialog extends StatefulWidget {
+  final List<Subject> subjects;
+  final FriendService friendService;
+
+  const _InviteDialog({required this.subjects, required this.friendService});
+
+  @override
+  State<_InviteDialog> createState() => _InviteDialogState();
+}
+
+class _InviteDialogState extends State<_InviteDialog> {
+  final Set<String> _toSelect = {};
+  String? _suggestedSubjectId;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF363A4D),
+      title: const Text('Invite Friends', style: TextStyle(color: Colors.white)),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 300,
+        child: Column(
+          children: [
+            DropdownButton<String?>(
+              value: _suggestedSubjectId,
+              dropdownColor: const Color(0xFF363A4D),
+              isExpanded: true,
+              hint: const Text('Suggested subject (optional)', style: TextStyle(color: Colors.white70)),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('No suggestion', style: TextStyle(color: Colors.white70))),
+                ...widget.subjects.map((s) => DropdownMenuItem<String?>(value: s.id, child: Text(s.name, style: const TextStyle(color: Colors.white)))),
+              ],
+              onChanged: (v) => setState(() => _suggestedSubjectId = v),
+            ),
             const SizedBox(height: 12),
             Expanded(
-              child: Center(
-                child: Text(
-                  _fmt(_elapsedSeconds),
-                  style: const TextStyle(color: Colors.white, fontSize: 56, fontWeight: FontWeight.w700),
-                ),
+              child: StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                stream: widget.friendService.friendsStream(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) return const Center(child: Text('No friends found', style: TextStyle(color: Colors.white70)));
+                  
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final d = docs[index].data();
+                      final fid = docs[index].id;
+                      final fname = (d['friendDisplayName'] ?? fid) as String;
+                      final selectedFlag = _toSelect.contains(fid);
+                      
+                      return ListTile(
+                        title: Text(fname, style: const TextStyle(color: Colors.white)),
+                        trailing: Checkbox(
+                          value: selectedFlag, 
+                          activeColor: const Color(0xFF7550FF),
+                          side: const BorderSide(color: Colors.white54),
+                          onChanged: (v) { 
+                            if (v == true) _toSelect.add(fid); 
+                            else _toSelect.remove(fid); 
+                            setState(() {}); 
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
-            // Pause / Resume button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _running ? _pause : _start,
-                  icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                  label: Text(_running ? 'Pause' : 'Resume'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _running ? Colors.orange : const Color(0xFF7550FF),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Big Finish Session button
-            ElevatedButton(
-              onPressed: _elapsedSeconds <= 0 ? null : _finishSession,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                child: Text('Finish Session', style: TextStyle(fontSize: 18, color: Colors.white)),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
           ],
         ),
       ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7550FF)),
+          onPressed: () => Navigator.pop(context, {'selected': _toSelect.toList(), 'suggested': _suggestedSubjectId}), 
+          child: const Text('Invite', style: TextStyle(color: Colors.white))
+        ),
+      ],
     );
   }
 }
