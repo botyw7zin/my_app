@@ -209,14 +209,7 @@ class FriendService {
       .where('status', isEqualTo: 'pending')
       .orderBy('createdAt', descending: true)
       .snapshots()
-      .handleError((error) {
-        if (error is FirebaseException && error.message != null && error.message!.contains('requires an index')) {
-          throw Exception(
-              'Friend requests stream requires a Firestore composite index. Please create the index in the Firebase console. Firestore error: ${error.message}');
-        } else {
-          throw error;
-        }
-      });
+      .handleError((error) {});
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> friendsStream() {
