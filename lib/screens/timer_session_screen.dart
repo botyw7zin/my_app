@@ -40,15 +40,29 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
   @override
   void initState() {
     super.initState();
-    // Start timer automatically when page opens
+    // Start timer automatically when page opens. If joining an existing
+    // session, initialize the elapsed time based on the session's createdAt
+    // so we share the same timer as the owner.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      _start();
-
-      // If a sessionId was provided, join that session quietly by setting
-      // local session id; otherwise create a new session as before.
       if (widget.sessionId != null) {
-        setState(() => _sessionId = widget.sessionId);
+        // Joining existing session: fetch session once to compute elapsed
+        try {
+          final ss = await _sessionService.sessionStream(widget.sessionId!).first;
+          final now = DateTime.now();
+          final diff = now.difference(ss.createdAt).inSeconds;
+          if (mounted) {
+            setState(() {
+              _elapsedSeconds = diff > 0 ? diff : 0;
+              _sessionId = widget.sessionId;
+            });
+          }
+        } catch (e) {
+          debugPrint('>>> [TimerSession] Failed to load existing session: $e');
+          if (mounted) setState(() => _sessionId = widget.sessionId);
+        }
+        _start();
       } else {
+        // Creating a new session as owner
         try {
           final id = await _sessionService.createSession(widget.subject.id);
           if (mounted) {
@@ -59,6 +73,7 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
         } catch (e) {
           debugPrint('>>> [TimerSession] Failed to create session: $e');
         }
+        _start();
       }
     });
   }
