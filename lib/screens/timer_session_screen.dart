@@ -144,7 +144,24 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
   Future<void> _finishSession() async {
     _pause();
     final minutes = _elapsedSeconds ~/ 60;
+    // First, always update session state (close if owner, leave if participant)
+    if (_sessionId != null) {
+      try {
+        final raw = await _firestore.collection('studySessions').doc(_sessionId).get();
+        final data = raw.data() ?? {};
+        final ownerId = data['ownerId'] as String?;
+        final myUid = FirebaseAuth.instance.currentUser?.uid;
+        if (ownerId != null && myUid != null && ownerId == myUid) {
+          await _sessionService.closeSession(_sessionId!);
+        } else {
+          await _sessionService.leaveSession(_sessionId!);
+        }
+      } catch (e) {
+        debugPrint('Failed to update session state on finish: $e');
+      }
+    }
 
+    // If no minutes recorded, just pop (session already closed/left above)
     if (minutes == 0) {
       Navigator.pop(context, false);
       return;
@@ -158,23 +175,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Added $minutes min to "${widget.subject.name}"')),
       );
-      // If this session exists, handle session cleanup: owner closes it, others leave
-      if (_sessionId != null) {
-        try {
-          final raw = await _firestore.collection('studySessions').doc(_sessionId).get();
-          final data = raw.data() ?? {};
-          final ownerId = data['ownerId'] as String?;
-          final myUid = FirebaseAuth.instance.currentUser?.uid;
-          if (ownerId != null && myUid != null && ownerId == myUid) {
-            await _sessionService.closeSession(_sessionId!);
-          } else {
-            await _sessionService.leaveSession(_sessionId!);
-          }
-        } catch (e) {
-          debugPrint('Failed to update session state on finish: $e');
-        }
-      }
-
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
