@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 
 class FriendService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -169,18 +171,32 @@ class FriendService {
     return doc.exists;
   }
 
+  /// Checks the most recent friend request status between the current user and [otherUserId].
+  /// Note: This query uses two equality filters plus an orderBy on `createdAt` and
+  /// therefore requires a Firestore composite index:
+  /// - collection: `friendRequests`
+  /// - fields: `fromUserId` (ASC), `toUserId` (ASC), `createdAt` (DESC)
   Future<String?> existingRequestStatus(String otherUserId) async {
     final myId = _uid;
-    final snap = await _firestore
-        .collection('friendRequests')
-        .where('fromUserId', isEqualTo: myId)
-        .where('toUserId', isEqualTo: otherUserId)
-        .orderBy('createdAt', descending: true)
-        .limit(1)
-        .get();
+    try {
+      final snap = await _firestore
+          .collection('friendRequests')
+          .where('fromUserId', isEqualTo: myId)
+          .where('toUserId', isEqualTo: otherUserId)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
 
-    if (snap.docs.isEmpty) return null;
-    return snap.docs.first.data()['status'] as String?;
+      if (snap.docs.isEmpty) return null;
+      return snap.docs.first.data()['status'] as String?;
+    } on FirebaseException catch (e) {
+      if (e.message != null && e.message!.contains('requires an index')) {
+        throw Exception(
+            'Friend request lookup requires a Firestore composite index. '
+            'Please create the index in the Firebase console. Firestore error: ${e.message}');
+      }
+      rethrow;
+    }
   }
 
   /// ---------- STREAMS ----------
@@ -192,7 +208,15 @@ class FriendService {
       .where('toUserId', isEqualTo: toUserId)
       .where('status', isEqualTo: 'pending')
       .orderBy('createdAt', descending: true)
-      .snapshots();
+      .snapshots()
+      .handleError((error) {
+        if (error is FirebaseException && error.message != null && error.message!.contains('requires an index')) {
+          throw Exception(
+              'Friend requests stream requires a Firestore composite index. Please create the index in the Firebase console. Firestore error: ${error.message}');
+        } else {
+          throw error;
+        }
+      });
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> friendsStream() {
