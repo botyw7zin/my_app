@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friends_service.dart';
 import '../widgets/base_screen.dart';
+import '../widgets/notification_icon.dart';
 import 'friends_request_screen.dart'; // Add this line
 
 class FriendsScreen extends StatefulWidget {
@@ -378,12 +379,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       ),
                     ),
                     // Notification Icon (Top Right)
-                    IconButton(
-                      icon: const Icon(Icons.notifications, color: Colors.white, size: 28),
-                      onPressed: () {
-                         // Navigate to friend requests
-                         Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestsScreen()));
-                      },
+                    NotificationIcon(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestsScreen())),
                     ),
                   ],
                 );

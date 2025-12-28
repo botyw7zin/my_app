@@ -15,6 +15,7 @@ import 'friends_request_screen.dart';
 
 // Widgets
 import '../widgets/background.dart'; 
+import '../widgets/notification_icon.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -197,33 +198,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                       Stack(
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.notifications, color: Colors.white),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const FriendRequestsScreen()),
-                            ),
-                          ),
-                           // Red Dot Logic
-                           Positioned(
-                              right: 12,
-                              top: 12,
-                              child: StreamBuilder<QuerySnapshot>(
-                                stream: _friendService.incomingRequestsStream(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                                     return Container(
-                                      width: 8, height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF7550FF), 
-                                        shape: BoxShape.circle,
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
+                              NotificationIcon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const FriendRequestsScreen()),
+                                ),
                               ),
-                            ),
                         ],
                       ),
                     ],

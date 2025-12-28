@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../widgets/base_screen.dart';
+import '../widgets/notification_icon.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
 import 'incoming_sessions_screen.dart';
@@ -183,8 +184,8 @@ class _HomeState extends State<Home> {
                     ),
 
                     // --- ICON 1: Notifications (with unread dot) ---
-                    InkWell(
-                      onTap: () {
+                    NotificationIcon(
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -192,26 +193,6 @@ class _HomeState extends State<Home> {
                           ),
                         );
                       },
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.notifications, color: Colors.white, size: 28),
-                          if (_hasNotifications)
-                            Positioned(
-                              right: 0,
-                              top: 4,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 1.5),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
                     ),
 
                     const SizedBox(width: 8),

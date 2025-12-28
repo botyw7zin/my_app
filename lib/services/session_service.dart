@@ -250,6 +250,7 @@ class SessionService {
     return _firestore
         .collection('studySessions')
         .where('participantIds', arrayContains: uid)
+        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
