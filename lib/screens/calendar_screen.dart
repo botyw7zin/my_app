@@ -29,6 +29,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _firstOfMonth;
   late DateTime _lastOfMonth;
   late DateTime _selected;
+  final ScrollController _dayScrollController = ScrollController();
   
   // Filter state: 'All', 'done', 'In Progress'
   String _currentFilter = 'All';
@@ -43,6 +44,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _firstOfMonth = DateTime(_today.year, _today.month, 1);
     _lastOfMonth = DateTime(_today.year, _today.month + 1, 0);
     _selected = DateTime(_today.year, _today.month, _today.day);
+    // After first frame, try to scroll the day list so the selected (today) is visible/centered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final days = _daysInMonth();
+      final index = days.indexWhere((d) => d.year == _selected.year && d.month == _selected.month && d.day == _selected.day);
+      if (index < 0) return;
+      if (!_dayScrollController.hasClients) return; // if list not laid out yet, skip safe
+
+      final itemWidth = 65.0; // matches item width in builder
+      final separator = 12.0; // matches separator width
+      final horizontalPadding = 20.0; // list padding
+      final screenWidth = MediaQuery.of(context).size.width;
+      final target = horizontalPadding + index * (itemWidth + separator) - (screenWidth / 2 - itemWidth / 2);
+      final maxScroll = _dayScrollController.position.maxScrollExtent;
+      final offset = target.clamp(0.0, maxScroll);
+      _dayScrollController.jumpTo(offset);
+    });
+  }
+
+  @override
+  void dispose() {
+    _dayScrollController.dispose();
+    super.dispose();
   }
 
   List<DateTime> _daysInMonth() {
@@ -216,6 +240,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 SizedBox(
                   height: 90,
                   child: ListView.separated(
+                    controller: _dayScrollController,
                     // Aligns the scrolling days with the content below
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     scrollDirection: Axis.horizontal,
@@ -446,7 +471,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: isDone 
-                      ? const Color(0xFFE0F7FA) 
+                      ? const Color(0xFFE0F7FA)
                       : const Color(0xFFFFEAD1), 
                   borderRadius: BorderRadius.circular(20),
                 ),

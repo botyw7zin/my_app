@@ -808,7 +808,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                                   'Subjects - projects',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 19,
+                                    fontSize: 24,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

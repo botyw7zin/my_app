@@ -282,18 +282,18 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 alignment: Alignment.center,
                                 children: [
                                   CircleAvatar(
-                                    radius: 80,
+                                    radius: 100,
                                     backgroundColor: const Color(0xFF7550FF),
                                     child: ClipOval(
                                       child: SizedBox(
-                                        width: 160,
-                                        height: 160,
+                                        width: 200,
+                                        height: 200,
                                         child: photoURL.startsWith('http')
                                             ? Image.network(
                                                 photoURL,
                                                 fit: BoxFit.cover,
                                                 errorBuilder: (context, error, stackTrace) {
-                                                  return const Icon(Icons.person, size: 80, color: Colors.white);
+                                                  return const Icon(Icons.person, size: 100, color: Colors.white);
                                                 },
                                               )
                                             : (photoURL.isNotEmpty
@@ -301,22 +301,22 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                                     photoURL,
                                                     fit: BoxFit.cover,
                                                     errorBuilder: (context, error, stackTrace) {
-                                                      return const Icon(Icons.person, size: 80, color: Colors.white);
+                                                      return const Icon(Icons.person, size: 100, color: Colors.white);
                                                     },
                                                   )
-                                                : const Icon(Icons.person, size: 80, color: Colors.white)),
+                                                : const Icon(Icons.person, size: 100, color: Colors.white)),
                                       ),
                                     ),
                                   ),
                                   // translucent camera overlay
                                   Container(
-                                    width: 160,
-                                    height: 160,
+                                    width: 200,
+                                    height: 200,
                                     decoration: BoxDecoration(
                                       color: Colors.black.withOpacity(0.3),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.photo_camera, color: Colors.white70, size: 40),
+                                    child: const Icon(Icons.photo_camera, color: Colors.white70, size: 48),
                                   ),
                                 ],
                               ),
@@ -336,9 +336,10 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                             padding: EdgeInsets.only(left: 6.0, bottom: 12.0),
                             child: Text(
                               'Settings and Privacy',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600),
                             ),
                           ),
+                          const SizedBox(height: 20), // Extra spacing between header and buttons
 
                           // Buttons area
                           Center(
@@ -348,12 +349,12 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                   text: 'Change Username',
                                   onTap: _updateUsername,
                                 ),
-                                const SizedBox(height: 20), // Increased spacing
+                                const SizedBox(height: 22), // Increased spacing
                                 _OutlineActionButton(
                                   text: 'Change E-mail',
                                   onTap: _updateEmail,
                                 ),
-                                const SizedBox(height: 20), // Increased spacing
+                                const SizedBox(height: 22), // Increased spacing
                                 _OutlineActionButton(
                                   text: 'Change Password',
                                   onTap: _changePassword,
@@ -374,16 +375,13 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40), // Increased bottom padding
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 60, // Larger height
-                      child: CustomButton(
-                        text: 'Logout',
-                        onPressed: () => _authService.signOut(context),
-                        // width and height are handled by SizedBox
-                        fontSize: 20, // Larger font
-                        backgroundColor: const Color(0xFF7550FF),
-                      ),
+                    child: CustomButton(
+                      text: 'Logout',
+                      onPressed: () => _authService.signOut(context),
+                      width: 250,
+                      height: 53,
+                      fontSize: 20,
+                      backgroundColor: const Color(0xFF7550FF),
                     ),
                   ),
                 ),
@@ -409,8 +407,9 @@ class _OutlineActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        height: 60, // Larger height
-        alignment: Alignment.center,
+        height: 64, // Increased vertical space
+        padding: const EdgeInsets.symmetric(horizontal: 20), // Text starts from left with padding
+        alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30), // Rounder corners

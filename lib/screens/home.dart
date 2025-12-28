@@ -195,46 +195,7 @@ class _HomeState extends State<Home> {
                       },
                     ),
 
-                    const SizedBox(width: 8),
-
-                    // --- ICON 2: Sign Out ---
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      iconSize: 28,
-                      tooltip: 'Sign Out',
-                      constraints: const BoxConstraints(),
-                      onPressed: () async {
-                        final shouldLogout = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: const Color(0xFF363A4D),
-                            title: const Text('Sign Out',
-                                style: TextStyle(color: Colors.white)),
-                            content: const Text(
-                              'Are you sure you want to sign out?',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  'Sign Out',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (shouldLogout == true && mounted) {
-                          _signOut();
-                        }
-                      },
-                    ),
+                    // Sign out button removed as requested
                   ],
                 );
               },
