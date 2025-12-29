@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../widgets/base_screen.dart';
+import '../widgets/notification_icon.dart';
 import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
 import 'incoming_sessions_screen.dart';
 import 'user_settings_screen.dart';
-import 'support_chat_screen.dart'; // ADD THIS IMPORT
 import '../services/subject_service.dart';
 import '../services/friends_service.dart';
 import '../services/session_service.dart';
@@ -106,6 +106,8 @@ class _HomeState extends State<Home> {
     }
   }
 
+  // User settings are opened via the avatar tap; no extra helpers required.
+
   @override
   void dispose() {
     _friendSub?.cancel();
@@ -120,10 +122,10 @@ class _HomeState extends State<Home> {
       currentScreen: 'Home',
       appBarColor: const Color(0xFF2C2F3E),
       automaticallyImplyLeading: false,
-      showAppBar: false,
+      showAppBar: false, // 1. Hide the AppBar
       
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16), // 2. Standard padding is now safe
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -182,8 +184,8 @@ class _HomeState extends State<Home> {
                     ),
 
                     // --- ICON 1: Notifications (with unread dot) ---
-                    InkWell(
-                      onTap: () {
+                    NotificationIcon(
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -191,123 +193,14 @@ class _HomeState extends State<Home> {
                           ),
                         );
                       },
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.notifications, color: Colors.white, size: 28),
-                          if (_hasNotifications)
-                            Positioned(
-                              right: 0,
-                              top: 4,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 1.5),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
                     ),
 
-                    const SizedBox(width: 8),
-
-                    // --- ICON 2: Sign Out ---
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      iconSize: 28,
-                      tooltip: 'Sign Out',
-                      constraints: const BoxConstraints(),
-                      onPressed: () async {
-                        final shouldLogout = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: const Color(0xFF363A4D),
-                            title: const Text('Sign Out',
-                                style: TextStyle(color: Colors.white)),
-                            content: const Text(
-                              'Are you sure you want to sign out?',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  'Sign Out',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (shouldLogout == true && mounted) {
-                          _signOut();
-                        }
-                      },
-                    ),
+                    // Sign out button removed as requested
                   ],
                 );
               },
             ),
-            const SizedBox(height: 32),
-            
-            // AI Support Button
-            Center(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SupportChatScreen(),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 280,
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7550FF), Color(0xFFFF6B9D)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF7550FF).withOpacity(0.4),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.psychology, color: Colors.white, size: 28),
-                      SizedBox(width: 12),
-                      Text(
-                        'Talk to AI Support',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
+            const SizedBox(height: 24),
             const Expanded(
               child: Center(
                 child: Text(

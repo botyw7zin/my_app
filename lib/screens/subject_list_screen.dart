@@ -6,6 +6,7 @@ import '../services/subject_service.dart';
 import '../widgets/base_screen.dart';
 import 'update_subject.dart';
 import 'friends_request_screen.dart'; // Add this line
+import '../widgets/notification_icon.dart';
 import 'timer_session_screen.dart';
 class SubjectsListScreen extends StatefulWidget {
   const SubjectsListScreen({super.key});
@@ -719,9 +720,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                               ],
                             ),
                             // Notification Icon
-                            IconButton(
-                              icon: const Icon(Icons.notifications, color: Colors.white),
-                              iconSize: 28,
+                            NotificationIcon(
                               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestsScreen())),
                             ),
                           ],
@@ -809,7 +808,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                                   'Subjects - projects',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 19,
+                                    fontSize: 24,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

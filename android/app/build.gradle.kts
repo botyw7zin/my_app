@@ -21,7 +21,11 @@ android {
 
     defaultConfig {
         applicationId = "com.example.my_app"
+<<<<<<< HEAD
         minSdk = 26
+=======
+        minSdk = flutter.minSdkVersion
+>>>>>>> origin/main
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"

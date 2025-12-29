@@ -307,8 +307,8 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 26, // Larger subject name
-                      fontWeight: FontWeight.bold,
+                      fontSize: 19, // Larger subject name
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
 
@@ -317,7 +317,7 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
                   // --- Timer Box ---
                   // Added a backdrop filter or opacity to make timer readable over glow
                   Container(
-                    width: double.infinity,
+                    width: 320,
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     decoration: BoxDecoration(
                       color: const Color(0xFF363A4D).withOpacity(0.8), // Slightly transparent
@@ -342,22 +342,22 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
 
                   // --- Buttons ---
                   CustomButton(
-                    text: "ask a friend to join",
+                    text: "Ask a friend to join",
                     onPressed: _inviteFriend,
                     backgroundColor: const Color(0xFF7550FF),
-                    width: double.infinity,
-                    height: 55,
+                    width: 248,
+                    height: 48,
                     fontSize: 18,
                   ),
 
                   const SizedBox(height: 16),
 
                   CustomButton(
-                    text: _running ? "take a short rest" : "resume session",
+                    text: _running ? "Take a short rest" : "Resume session",
                     onPressed: _toggleRest,
                     backgroundColor: _running ? const Color(0xFF7550FF) : Colors.orange,
-                    width: double.infinity,
-                    height: 55,
+                    width: 248,
+                    height: 48,
                     fontSize: 18,
                   ),
 

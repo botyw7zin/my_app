@@ -107,7 +107,7 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white70,
+            color: Colors.white,
             fontSize: 14,
           ),
         ),
