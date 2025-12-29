@@ -14,7 +14,7 @@ import 'services/subject_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  print('🚀 [main] App starting...');
+  
 
 
   // Initialize Firebase
@@ -30,23 +30,17 @@ void main() async {
   
   // Log initial Hive state
   final subjectsBox = Hive.box<Subject>('subjectsBox');
-  print('✅ [main] Hive boxes opened');
-  print('📦 [main] Subjects in Hive: ${subjectsBox.length}');
+  
   
   // Log details of subjects if they exist
   if (subjectsBox.isNotEmpty) {
-    print('📊 [main] Subject details:');
-    for (var subject in subjectsBox.values.take(3)) {
-      print('   - ${subject.name}: ${subject.hoursCompleted.toStringAsFixed(1)}/${subject.hourGoal} hours (synced: ${subject.isSynced})');
-    }
+    
   }
 
   // Initialize WorkManager for background sync
   await SubjectService().initializeWorkManager();
 
-  print('>>> [main] Firebase Auth current user: ${FirebaseAuth.instance.currentUser?.uid}');
-  print('>>> [main] Hive boxes opened.');
-  print('>>> [main] WorkManager initialized.');
+  
 
   runApp(const MyApp());
 }

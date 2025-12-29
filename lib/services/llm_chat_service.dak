@@ -26,7 +26,6 @@ Always be warm, understanding, and positive.""";
       // Check if model is downloaded
       final modelPath = await _downloadService.getModelPath();
       if (modelPath == null) {
-        print('Model not downloaded yet');
         return false;
       }
 
@@ -41,11 +40,9 @@ Always be warm, understanding, and positive.""";
       );
 
       _isModelLoaded = true;
-      print('Model loaded successfully');
       return true;
 
     } catch (e) {
-      print('Error loading model: $e');
       _isModelLoaded = false;
       return false;
     }
@@ -75,7 +72,6 @@ Always be warm, understanding, and positive.""";
       }
 
     } catch (e) {
-      print('Error generating response: $e');
       yield 'I apologize, but I encountered an error. Please try again.';
     }
   }
@@ -125,7 +121,6 @@ Always be warm, understanding, and positive.""";
       return buffer.toString().trim();
 
     } catch (e) {
-      print('Error generating response: $e');
       return 'I apologize, but I encountered an error. Please try again.';
     }
   }
@@ -135,7 +130,6 @@ Always be warm, understanding, and positive.""";
     try {
       await _llamaController?.stop();
     } catch (e) {
-      print('Error stopping generation: $e');
     }
   }
 
@@ -145,9 +139,7 @@ Always be warm, understanding, and positive.""";
       await _llamaController?.dispose();
       _llamaController = null;
       _isModelLoaded = false;
-      print('Model unloaded');
     } catch (e) {
-      print('Error unloading model: $e');
     }
   }
 

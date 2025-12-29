@@ -34,7 +34,6 @@ class _SplashPageState extends State<SplashPage> {
         subjectService.listenForConnectivityChanges();
       } catch (e) {
         // non-fatal: continue to home even if sync fails
-        debugPrint('>>> [Splash] Post-auth sync failed: $e');
       }
 
       Navigator.pushReplacementNamed(context, '/home');

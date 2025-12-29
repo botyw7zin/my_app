@@ -74,7 +74,6 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
 
   Future<void> _updateSubject() async {
     if (_formKey.currentState!.validate()) {
-      print('>>> [UpdateSubjectScreen] Updating subject: ${_nameController.text}');
       try {
         await _subjectService.updateSubject(
           widget.subject,

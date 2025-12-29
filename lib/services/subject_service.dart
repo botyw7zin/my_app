@@ -15,7 +15,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    print('>>> [WorkManager] Task started: $task');
+    
 
     try {
       await Firebase.initializeApp();
@@ -27,10 +27,10 @@ void callbackDispatcher() {
 
       await SubjectService.backgroundSyncToFirebase();
 
-      print('>>> [WorkManager] Task completed successfully: $task');
+      
       return Future.value(true);
     } catch (e) {
-      print('>>> [WorkManager] Task failed: $task, error: $e');
+      
       return Future.value(false);
     }
   });
@@ -75,7 +75,6 @@ class SubjectService {
       status: 'in progress',
     );
     await subjectBox.put(subjectId, subject);
-    print('>>> [createSubject] Created subject in Hive: $subjectId - $name');
     // If online, attempt to push to Firestore immediately
     if (await _isOnline()) {
       try {
@@ -88,9 +87,7 @@ class SubjectService {
             .set(_toFirestoreJson(subject));
         subject.isSynced = true;
         await subject.save();
-        print('>>> [createSubject] Synced new subject to Firestore: $subjectId');
       } catch (e) {
-        print('>>> [createSubject] Failed to push new subject immediately: $e');
       }
     }
   }
@@ -115,7 +112,6 @@ class SubjectService {
         return false;
       }
     } catch (e) {
-      print('>>> [_isOnline] Error checking connectivity: $e');
       return false;
     }
   }
@@ -152,7 +148,7 @@ class SubjectService {
     subject.isSynced = false;
     await subject.save();
 
-    print('>>> [updateSubject] Updated subject in Hive: ${subject.id} - ${subject.name}');
+    
     // If online, attempt immediate remote update (optimistic sync)
     if (await _isOnline()) {
       try {
@@ -165,9 +161,7 @@ class SubjectService {
             .set(_toFirestoreJson(subject));
         subject.isSynced = true;
         await subject.save();
-        print('>>> [updateSubject] Synced updated subject to Firestore: ${subject.id}');
       } catch (e) {
-        print('>>> [updateSubject] Failed to sync update immediately: $e');
       }
     }
   }
@@ -185,10 +179,8 @@ class SubjectService {
             .delete();
         // remove local immediately
         await subject.delete();
-        print('>>> [deleteSubject] Deleted remote and local: ${subject.id} - ${subject.name}');
         return;
       } catch (e) {
-        print('>>> [deleteSubject] Failed to delete remote immediately: $e — marking for deletion locally');
         // fall through to mark for deletion locally
       }
     }
@@ -197,7 +189,7 @@ class SubjectService {
     subject.isDeleted = true;
     subject.isSynced = false;
     await subject.save();
-    print('>>> [deleteSubject] Marked for deletion in Hive: ${subject.id} - ${subject.name}');
+    
   }
 
   Future<void> addStudyHours(Subject subject, double deltaHours) async {
@@ -218,7 +210,7 @@ class SubjectService {
     subject.isSynced = false;
     await subject.save();
     
-    print('>>> [addStudyHours] Updated hours in Hive: ${subject.id} - ${subject.hoursCompleted}/${subject.hourGoal}');
+    
     // Attempt immediate sync when online
     if (await _isOnline()) {
       try {
@@ -231,9 +223,7 @@ class SubjectService {
             .set(_toFirestoreJson(subject));
         subject.isSynced = true;
         await subject.save();
-        print('>>> [addStudyHours] Synced hours update to Firestore: ${subject.id}');
       } catch (e) {
-        print('>>> [addStudyHours] Failed to sync hours immediately: $e');
       }
     }
   }
@@ -244,12 +234,11 @@ class SubjectService {
     final subjectBox = Hive.box<Subject>('subjectsBox');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      print('>>> [syncToFirebase] No auth user, skipping.');
       return;
     }
     final now = DateTime.now();
 
-    print('>>> [syncToFirebase] Starting sync...');
+    
 
     // Mark as late if deadline has passed
     for (final subject in subjectBox.values) {
@@ -268,7 +257,7 @@ class SubjectService {
     int syncedCount = 0;
     for (final subject
         in subjectBox.values.where((s) => !s.isSynced && !s.isDeleted)) {
-      print('>>> [syncToFirebase] Syncing: ${subject.id} - ${subject.name} (hoursCompleted: ${subject.hoursCompleted})');
+      
       try {
         await _firestore
           .collection('users')
@@ -279,16 +268,14 @@ class SubjectService {
         subject.isSynced = true;
         await subject.save();
         syncedCount++;
-        print('>>> [syncToFirebase] ✅ Synced to Firestore: ${subject.id}');
       } catch (e) {
-        print('>>> [syncToFirebase] Firestore sync error for subject ${subject.id}: $e');
       }
     }
 
     // Sync deletions
     for (final subject
         in subjectBox.values.where((s) => s.isDeleted && !s.isSynced)) {
-      print('>>> [syncToFirebase] Remote delete: ${subject.id}');
+      
       try {
         await _firestore
             .collection('users')
@@ -297,13 +284,12 @@ class SubjectService {
             .doc(subject.id)
             .delete();
         await subject.delete();
-        print('>>> [syncToFirebase] Deleted in Firestore and Hive: ${subject.id}');
+        
       } catch (e) {
-        print('>>> [syncToFirebase] Firestore delete error for subject ${subject.id}: $e');
       }
     }
     
-    print('>>> [syncToFirebase] Sync completed');
+    
   }
 
   // ------- WorkManager Integration -------
@@ -314,7 +300,7 @@ class SubjectService {
       callbackDispatcher,
       isInDebugMode: true,
     );
-    print('>>> [initializeWorkManager] WorkManager initialized');
+    
 
     await _registerPeriodicSync();
   }
@@ -330,7 +316,7 @@ class SubjectService {
       ),
       existingWorkPolicy: ExistingWorkPolicy.keep,
     );
-    print('>>> [_registerPeriodicSync] Registered periodic sync task');
+    
   }
 
   /// Cancel all background sync tasks
@@ -342,33 +328,30 @@ class SubjectService {
     await _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
     
-    print('>>> [cancelBackgroundSync] Cancelled all sync tasks and listeners');
+    
   }
 
   /// Call this ONCE per session after login - triggers sync when coming online
   void listenForConnectivityChanges() {
     _connectivitySubscription?.cancel();
     
-    print('>>> [listenForConnectivityChanges] Registering connectivity listener');
+    
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((conn) async {
-      print('>>> [listenForConnectivityChanges] Connectivity changed: $conn');
       final user = FirebaseAuth.instance.currentUser;
-      print('>>> [listenForConnectivityChanges] user: ${user?.uid}');
 
       final subjectBox = Hive.box<Subject>('subjectsBox');
       final unsyncedCount = subjectBox.values.where((s) => !s.isSynced).length;
-      print('>>> [listenForConnectivityChanges] Unsynced: $unsyncedCount');
+      
 
       // Use stronger isOnline check to avoid false positives from network interface
       if (await _isOnline()) {
         try {
-          print('>>> [listenForConnectivityChanges] Confirmed internet, performing two-way sync');
+          
           await syncBothWays();
         } catch (e) {
-          print('>>> [listenForConnectivityChanges] syncBothWays failed: $e');
         }
       } else {
-        print('>>> [listenForConnectivityChanges] No internet after verification, skipping sync');
+        
       }
     });
 
@@ -376,19 +359,19 @@ class SubjectService {
     (() async {
       try {
         final onlineNow = await _isOnline();
-        print('>>> [listenForConnectivityChanges] Initial online check: $onlineNow');
+        
         if (onlineNow) {
           await syncBothWays();
         }
       } catch (e) {
-        print('>>> [listenForConnectivityChanges] Initial sync check failed: $e');
+        
       }
     })();
   }
 
   /// Manual sync trigger (e.g., pull-to-refresh or "Sync Now" button)
   Future<void> manualSync() async {
-    print('>>> [manualSync] User triggered manual sync');
+    
     await syncToFirebase();
   }
 
@@ -447,12 +430,12 @@ class SubjectService {
     final subjectBox = Hive.box<Subject>('subjectsBox');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      print('>>> [syncBothWays] No auth user, skipping.');
+    
       return;
     }
 
     try {
-      print('>>> [syncBothWays] Starting two-way sync for user: ${user.uid}');
+      
 
       // 1) Pull remote docs
       final snap = await _firestore
@@ -477,10 +460,10 @@ class SubjectService {
                 .doc(local.id)
                 .delete();
             await local.delete();
-            print('>>> [syncBothWays] Local was deleted -> removed remote and local: ${local.id}');
+            
             continue;
           } catch (e) {
-            print('>>> [syncBothWays] Error propagating local deletion for ${local.id}: $e');
+            
             // If deletion fails, skip this doc to avoid accidental overwrite
             continue;
           }
@@ -488,14 +471,14 @@ class SubjectService {
 
         if (local == null) {
           await subjectBox.put(remote.id, remote);
-          print('>>> [syncBothWays] Remote -> Local added: ${remote.id}');
+          
           continue;
         }
 
         if (local.updatedAt.isBefore(remote.updatedAt)) {
           // remote newer -> overwrite local
           await subjectBox.put(remote.id, remote);
-          print('>>> [syncBothWays] Remote newer -> Local updated: ${remote.id}');
+          
         } else if (local.updatedAt.isAfter(remote.updatedAt)) {
           // local newer -> push local to remote
           if (local.isDeleted) {
@@ -508,9 +491,9 @@ class SubjectService {
                   .doc(local.id)
                   .delete();
               await local.delete();
-              print('>>> [syncBothWays] Local was deleted -> removed remote and local: ${local.id}');
+              
             } catch (e) {
-              print('>>> [syncBothWays] Error deleting remote doc ${local.id}: $e');
+              
             }
           } else {
             try {
@@ -522,9 +505,9 @@ class SubjectService {
                   .set(_toFirestoreJson(local));
               local.isSynced = true;
               await local.save();
-              print('>>> [syncBothWays] Local newer -> pushed to remote: ${local.id}');
+              
             } catch (e) {
-              print('>>> [syncBothWays] Error pushing local ${local.id}: $e');
+              
             }
           }
         }
@@ -541,10 +524,10 @@ class SubjectService {
                 .doc(local.id)
                 .delete();
             await local.delete();
-            print('>>> [syncBothWays] Deleted remote and removed local: ${local.id}');
+            
             continue;
           } catch (e) {
-            print('>>> [syncBothWays] Error deleting remote for local ${local.id}: $e');
+            
           }
         }
 
@@ -558,14 +541,14 @@ class SubjectService {
               .set(_toFirestoreJson(local));
             local.isSynced = true;
             await local.save();
-            print('>>> [syncBothWays] Pushed local -> remote: ${local.id}');
+            
           } catch (e) {
-            print('>>> [syncBothWays] Error pushing local ${local.id}: $e');
+            
           }
         }
       }
 
-      print('>>> [syncBothWays] Two-way sync completed');
+      
       // Final cleanup: ensure any subjects marked `isDeleted` are removed from Hive
       // only after confirming remote doc is absent or removed. This prevents
       // leaving tombstones in Hive after a successful sync.
@@ -579,21 +562,21 @@ class SubjectService {
           final remoteSnap = await docRef.get();
           if (!remoteSnap.exists) {
             await local.delete();
-            print('>>> [syncBothWays] Cleanup: remote missing -> removed local tombstone: ${local.id}');
+            
             continue;
           }
 
           // If remote exists try deleting it, then remove local
           await docRef.delete();
           await local.delete();
-          print('>>> [syncBothWays] Cleanup: deleted remote and removed local: ${local.id}');
+          
         } catch (e) {
-          print('>>> [syncBothWays] Cleanup: failed to remove ${local.id}: $e');
+          
           // keep the local tombstone for next sync attempt
         }
       }
     } catch (e) {
-      print('>>> [syncBothWays] Error during sync: $e');
+      
     }
   }
 
@@ -602,7 +585,7 @@ class SubjectService {
   Future<void> clearLocalData() async {
     final subjectBox = Hive.box<Subject>('subjectsBox');
     await subjectBox.clear();
-    print('>>> [clearLocalData] Local subjects cleared');
+    
   }
 
   Future<void> loadFromFirebase(String userId) async {
@@ -612,7 +595,7 @@ class SubjectService {
         .doc(userId)
         .collection('subjects')
         .get();
-    print('>>> [loadFromFirebase] Fetching remote subjects...');
+    
     
     for (final doc in snap.docs) {
       final remoteJson = doc.data();
@@ -631,9 +614,9 @@ class SubjectService {
                 .collection('subjects')
                 .doc(doc.id)
                 .update({'deadline': Timestamp.fromDate(parsed)});
-            print('>>> [loadFromFirebase] Migrated remote deadline to Timestamp for ${doc.id}');
+            
           } catch (e) {
-            print('>>> [loadFromFirebase] Failed to migrate deadline for ${doc.id}: $e');
+            
           }
         }
       }
@@ -649,10 +632,10 @@ class SubjectService {
               .doc(doc.id)
               .delete();
           await local.delete();
-          print('>>> [loadFromFirebase] Local was deleted -> removed remote and local: ${doc.id}');
+          
           continue;
         } catch (e) {
-          print('>>> [loadFromFirebase] Failed to propagate local deletion for ${doc.id}: $e');
+          
           // If deletion failed, skip overwriting local for safety
           continue;
         }
@@ -660,7 +643,7 @@ class SubjectService {
 
       if (local == null || local.updatedAt.isBefore(remote.updatedAt)) {
         await subjectBox.put(remote.id, remote);
-        print('>>> [loadFromFirebase] Updated local subject: ${remote.id}');
+        
       }
     }
   }
@@ -698,19 +681,19 @@ class SubjectService {
 
   /// For Workmanager/background sync - runs in separate isolate
   static Future<void> backgroundSyncToFirebase() async {
-    print(">>> [backgroundSyncToFirebase] Background sync task started");
+    
 
     final subjectBox = Hive.box<Subject>('subjectsBox');
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      print('>>> [backgroundSyncToFirebase] No user, skipping sync');
+      
       return;
     }
 
     final conn = await Connectivity().checkConnectivity();
     if (conn == ConnectivityResult.none) {
-      print('>>> [backgroundSyncToFirebase] No connectivity, aborting');
+      
       return;
     }
 
@@ -731,9 +714,9 @@ class SubjectService {
     // Delegate to two-way sync which handles pull + push + deletions
     try {
       await SubjectService().syncBothWays();
-      print('>>> [backgroundSyncToFirebase] Delegated to syncBothWays');
+      
     } catch (e) {
-      print('>>> [backgroundSyncToFirebase] Error delegating sync: $e');
+      
     }
   }
 }
