@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/services/llm_chat_service.dart';
+import '../services/mock_llm_chat_service.dart';
 
 class SupportChatScreen extends StatefulWidget {
   const SupportChatScreen({Key? key}) : super(key: key);

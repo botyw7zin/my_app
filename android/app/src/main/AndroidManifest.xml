@@ -1,5 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-<<<<<<< HEAD
     <!-- Existing permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
     
@@ -7,11 +6,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
-=======
-    <!-- ADD THIS LINE - Required for Firebase and Google Sign-In -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-    
->>>>>>> origin/main
     <application
         android:label="my_app"
         android:name="${applicationName}"

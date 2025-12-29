@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
 import 'incoming_sessions_screen.dart';
 import 'user_settings_screen.dart';
+import 'support_chat_screen.dart'; // Add this import
 import '../services/subject_service.dart';
 import '../services/friends_service.dart';
 import '../services/session_service.dart';
@@ -106,8 +107,6 @@ class _HomeState extends State<Home> {
     }
   }
 
-  // User settings are opened via the avatar tap; no extra helpers required.
-
   @override
   void dispose() {
     _friendSub?.cancel();
@@ -122,10 +121,10 @@ class _HomeState extends State<Home> {
       currentScreen: 'Home',
       appBarColor: const Color(0xFF2C2F3E),
       automaticallyImplyLeading: false,
-      showAppBar: false, // 1. Hide the AppBar
+      showAppBar: false,
       
       body: Padding(
-        padding: const EdgeInsets.all(16), // 2. Standard padding is now safe
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -183,7 +182,7 @@ class _HomeState extends State<Home> {
                       ),
                     ),
 
-                    // --- ICON 1: Notifications (with unread dot) ---
+                    // Notifications Icon
                     NotificationIcon(
                       onPressed: () {
                         Navigator.push(
@@ -194,21 +193,86 @@ class _HomeState extends State<Home> {
                         );
                       },
                     ),
-
-                    // Sign out button removed as requested
                   ],
                 );
               },
             ),
             const SizedBox(height: 24),
+            
+            // Welcome Message
             const Expanded(
               child: Center(
-                child: Text(
-                  'Welcome to StudySync!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Welcome to StudySync!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Gradient Support Chat Button
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 40),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SupportChatScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 280,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF7550FF), // Purple
+                          Color(0xFFFF6B9D), // Pink
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7550FF).withOpacity(0.5),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.support_agent,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Chat with Support',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
