@@ -26,16 +26,13 @@ class _SplashPageState extends State<SplashPage> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Ensure subject sync and connectivity listener are initialized for
-      // users that were already signed in when the app started.
       try {
         final subjectService = SubjectService();
         await subjectService.syncBothWays();
         subjectService.listenForConnectivityChanges();
       } catch (e) {
-        // non-fatal: continue to home even if sync fails
+        // non-fatal
       }
-
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       setState(() {
@@ -46,29 +43,36 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       body: Stack(
         children: [
           // Reusable background component
           const GlowyBackground(),
-          
+
           // Main content
           SafeArea(
             child: Center(
               child: Column(
                 children: [
-                  const SizedBox(height: 100), // Top spacing
-                  
-                  // Logo positioned high
-                  Image.asset(
-                    'assets/images/StudySync.png',
-                    width: 268,
-                    height: 296,
+                  const SizedBox(height: 30), // Top spacing
+
+                  // --- UPDATED LOGO SECTION ---
+                  Container(
+                    // Multiplied by 0.8 to make it take 80% of screen width
+                    width: screenWidth * 0.8, 
+                    child: Image.asset(
+                      'assets/images/StudySync.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                  
-                  const Spacer(), // Push content to bottom
-                  
+                  // ----------------------------
+
+                  const SizedBox(height: 170), // Push content to bottom
+
                   // Bottom content
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -83,7 +87,7 @@ class _SplashPageState extends State<SplashPage> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 30),
                         const Text(
                           'This productive tool is designed to help\nyou better manage your study time\nand be with friends while you do it!',
                           textAlign: TextAlign.center,
@@ -107,6 +111,7 @@ class _SplashPageState extends State<SplashPage> {
                                   onPressed: () {
                                     Navigator.pushReplacementNamed(context, '/login');
                                   },
+                                  iconAsset: 'assets/images/Arrow - Left.png',
                                 )
                               : const SizedBox(
                                   width: 331,
@@ -121,7 +126,7 @@ class _SplashPageState extends State<SplashPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),

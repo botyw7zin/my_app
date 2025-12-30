@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback? onPressed; // <-- make nullable
+  final VoidCallback? onPressed;
   final double width;
   final double height;
   final double fontSize;
+  final Color backgroundColor;
+  final String? iconAsset; // CHANGED: Now accepts an image path (e.g., 'assets/images/arrow.png')
 
   const CustomButton({
     Key? key,
@@ -13,49 +15,9 @@ class CustomButton extends StatelessWidget {
     required this.onPressed,
     this.width = 150,
     this.height = 50,
-    this.fontSize = 18, 
-    required Color backgroundColor, // Default size for bigger words
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF5F33E1),
-          foregroundColor: Colors.white,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600, // optional, makes it even bigger
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-class GoogleLoginButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-  final double width;
-  final double height;
-  final double fontSize;
-
-  const GoogleLoginButton({
-    Key? key,
-    required this.text,
-    required this.onPressed,
-    this.width = 250,
-    this.height = 50,
     this.fontSize = 18,
+    required this.backgroundColor,
+    this.iconAsset, // Defaults to null
   }) : super(key: key);
 
   @override
@@ -66,31 +28,42 @@ class GoogleLoginButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,        // white button background
-          foregroundColor: Colors.black,        // black text
-          elevation: 2,
+          backgroundColor: backgroundColor,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(30),
           ),
+          padding: EdgeInsets.zero, // Remove default padding to control layout manually
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Image.asset(
-              'assets/images/google_logo.png',   // add the "G" logo asset in your assets folder
-              height: 28,
-              width: 28,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,            // black text
-                letterSpacing: 1.0,
+            // 1. Centered Text
+            // We use a container with width to ensure the text is truly centered 
+            // relative to the button width, not just the available space.
+            Container(
+              width: width,
+              alignment: Alignment.center,
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontFamily: 'LexendDeca',
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
+
+            // 2. Custom Image Arrow at the Right Frontier
+            if (iconAsset != null)
+              Positioned(
+                right: 20, // Adjust this value to move it closer/further from edge
+                child: Image.asset(
+                  iconAsset!,
+                  width: 24,  // Adjust size to match your design
+                  height: 24,
+                ),
+              ),
           ],
         ),
       ),
