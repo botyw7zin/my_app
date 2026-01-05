@@ -143,85 +143,100 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // --- 1. Get Screen Width ---
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: const Color(0xFF2C2F3E),
       body: Stack(
         children: [
-          // Add the reusable background
           const GlowyBackground(),
           
-          // Main content
           SafeArea(
-            child: SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 40),
-                      // Logo at top
-                      Image.asset(
-                        'assets/images/StudySync.png',
-                        width: 240,
-                        height: 220,
-                      ),
-                      
-                      const Spacer(),
-                      
-                      // Form content
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Form(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 42, vertical: 13),
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height - 
+                        MediaQuery.of(context).padding.top - 
+                        MediaQuery.of(context).padding.bottom - 26, 
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 50, bottom: 40),
+                          // --- 2. Applied Responsive Logic Here ---
+                          child: Container(
+                            width: screenWidth * 0.6, // 80% of screen width
+                            child: Image.asset(
+                              'assets/images/StudySync.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          // ----------------------------------------
+                        ),
+                        SizedBox(height: 60),
+                        
+                        Form(
                           key: _formKey,
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Google Sign-In button
-                              SizedBox(
-                                width: 330,
-                                height: 50,
-                                child: OutlinedButton.icon(
-                                  onPressed: _isLoading ? null : _signInWithGoogle,
-                                  icon: Image.asset('assets/images/google_Logo.png', width: 28, height: 28),
-                                  label: const Text(
-                                    'Sign in with Google',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontFamily: 'Lexend Deca',
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
+                              Center(
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _signInWithGoogle,
+                                    icon: Image.asset('assets/images/google_Logo.png', width: 28, height: 28),
+                                    label: const Text(
+                                      'LOGIN WITH GOOGLE',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontFamily: 'LexendDeca',
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    side: const BorderSide(color: Colors.white),
-                                    foregroundColor: Colors.black,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(28),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(color: Colors.white),
+                                      foregroundColor: Colors.black,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               
-                              // Email field
+                              Align(
+                                alignment: Alignment.centerLeft,
+                               
+                              ),
+                              SizedBox(height: 8),
                               CustomTextField(
-                                hintText: 'email',
+                                hintText: 'E-mail',
                                 controller: _emailController,
                                 obscureText: false,
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 20),
                               
-                              // Password field
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                
+                              ),
+                              SizedBox(height: 8),
                               CustomTextField(
-                                hintText: 'password',
+                                hintText: 'Password',
                                 controller: _passwordController,
                                 obscureText: true,
                               ),
                               const SizedBox(height: 12),
                               
-                              // Forgot Password
                               Align(
                                 alignment: Alignment.center,
                                 child: TextButton(
@@ -234,28 +249,32 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 32),
                               
-                              // Login Button at bottom
-                              CustomButton(
-                                text: 'LOGIN',
-                                onPressed: _isLoading ? null : _signInWithEmail,
-                                width: 330,
-                                height: 52,
-                                fontSize: 20,
-                                backgroundColor: const Color(0xFF7550FF),
+                              Center(
+                                child: CustomButton(
+                                  text: 'LOGIN',
+                                  onPressed: _isLoading ? null : _signInWithEmail,
+                                  width: 300,
+                                  height: 52,
+                                  fontSize: 20,
+                                  backgroundColor: const Color(0xFF7550FF),
+                                ),
                               ),
+                              
                               const SizedBox(height: 16),
                               
-                              // Sign up link
                               TextButton(
                                 onPressed: () {
                                   Navigator.pushNamed(context, '/signup');
                                 },
                                 child: const Text(
                                   'Don\'t have an account? Sign Up',
-                                  style: TextStyle(color: Colors.white,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: Colors.white,
-                                  decorationThickness: 1,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: 'LexendDeca',
+                                    fontWeight: FontWeight.w400,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.white,
+                                    decorationThickness: 1,
                                   ),
                                 ),
                               ),
@@ -263,8 +282,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

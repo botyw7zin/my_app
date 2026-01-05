@@ -81,24 +81,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
       backgroundColor: const Color(0xFF2C2F3E),
       body: Stack(
         children: [
-          // Add the reusable background
           const GlowyBackground(),
           
-          // Main content
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 26, vertical: 13),
+              padding: EdgeInsets.symmetric(horizontal: 42, vertical: 13),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(top: 75, bottom: 30),
+                    padding: EdgeInsets.only(top: 60, bottom: 40),
                     child: Text(
                       'Sign up',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF35E4C6),
-                        fontFamily: 'Lexend Deca',
+                        fontFamily: 'LexendDeca',
                         fontWeight: FontWeight.w800,
                         fontSize: 40,
                       ),
@@ -111,7 +109,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Username label + field
+                            // Username
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -123,15 +121,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 6),
+                            SizedBox(height: 8), 
                             CustomTextField(
                               hintText: 'Username',
                               controller: _nameController,
                               obscureText: false,
                             ),
-                            SizedBox(height: 18),
+                            SizedBox(height: 20),
 
-                            // E-mail label + field
+                            // E-mail
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -143,15 +141,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 6),
+                            SizedBox(height: 8),
                             CustomTextField(
                               hintText: 'E-mail',
                               controller: _emailController,
                               obscureText: false,
                             ),
-                            SizedBox(height: 18),
+                            SizedBox(height: 20),
 
-                            // Password label + field
+                            // Password
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -163,15 +161,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 6),
+                            SizedBox(height: 8),
                             CustomTextField(
                               hintText: 'Password',
                               controller: _passwordController,
                               obscureText: true,
                             ),
-                            SizedBox(height: 18),
+                            SizedBox(height: 20),
 
-                            // Confirm password label + field
+                            // Confirm password
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -183,30 +181,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 6),
+                            SizedBox(height: 8),
                             CustomTextField(
                               hintText: 'Confirm password',
                               controller: _confirmPasswordController,
                               obscureText: true,
                             ),
+                            
+                            SizedBox(height: 28),
                           ],
                         ),
                       ),
                     ),
                   ),
                   
-                  SizedBox(
-                    width: double.infinity,
-                    height: 51,
+                  // --- CHANGE HERE ---
+                  // Wrapped in Center so it doesn't stretch to full width
+                  Center( 
                     child: CustomButton(
                       text: 'Sign Up',
                       onPressed: _isLoading ? null : _signUp,
-                      width: double.infinity,
+                      width: 300, // Now this width (100) will actually work
                       height: 51,
-                      fontSize: 18,
+                      fontSize: 19,
                       backgroundColor: Color(0xFF7550FF),
                     ),
                   ),
+                  // -------------------
+
                   SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
@@ -216,7 +218,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         'Already have an account? Sign In',
                         style: TextStyle(
                           color: Colors.white,
-                          fontFamily: 'Lexend Deca',
+                          fontFamily: 'LexendDeca',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400, 
                           decoration: TextDecoration.underline,
                           decorationColor: Colors.white,
                           decorationThickness: 2,

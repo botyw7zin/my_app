@@ -359,7 +359,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
 
 
                           // Buttons area
@@ -374,6 +374,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 _OutlineActionButton(
                                   text: 'Change E-mail',
                                   onTap: _updateEmail,
+                                  glowColor: const Color(0xFF00F1E0),
                                 ),
                                 const SizedBox(height: 22),
                                 _OutlineActionButton(
@@ -391,6 +392,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                       ),
                                     );
                                   },
+                                  glowColor: const Color(0xFFFF3B30),
                                 ),
                               ],
                             ),
@@ -433,30 +435,40 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
 class _OutlineActionButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
+  final Color glowColor;
 
-
-  const _OutlineActionButton({required this.text, required this.onTap});
-
+  const _OutlineActionButton({required this.text, required this.onTap, this.glowColor = const Color(0xFF7550FF)});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity,
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        width: 330,
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 22),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: const Color(0xFF7550FF), width: 2),
+          border: Border.all(color: glowColor.withOpacity(0.95), width: 2),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7550FF).withOpacity(0.3),
-              blurRadius: 15,
+              color: glowColor.withOpacity(0.45),
+              blurRadius: 28,
               spreadRadius: 2,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: glowColor.withOpacity(0.18),
+              blurRadius: 18,
+              spreadRadius: 0,
+              offset: const Offset(0, -4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),

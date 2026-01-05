@@ -1,5 +1,7 @@
+import 'dart:ui'; // Needed for ImageFilter in AppBar
 import 'package:flutter/material.dart';
 import '../services/mock_llm_chat_service.dart';
+import '../widgets/background.dart'; // Import your background file here
 
 class SupportChatScreen extends StatefulWidget {
   const SupportChatScreen({Key? key}) : super(key: key);
@@ -78,7 +80,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error in chat: $e');
+      // Handle error
     }
     
     setState(() {
@@ -102,13 +104,28 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFF15171E), // Dark background for contrast
       appBar: AppBar(
-        title: const Text('Emotional Support Chat'),
-        backgroundColor: const Color(0xFF7550FF),
+        // Set main text and icon colors to white
+        title: const Text(
+          'Emotional Support Chat',
+          style: TextStyle(color: Colors.white), 
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent, // Transparent to show glass effect
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white), // Makes back button white
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
         actions: [
           if (_chatService.isModelLoaded)
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh, color: Colors.white), // Explicitly white
               onPressed: () {
                 setState(() {
                   _messages.clear();
@@ -118,131 +135,151 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : !_chatService.isModelLoaded
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'AI model not available',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Go to Settings'),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = _messages[index];
-                          final isUser = msg['role'] == 'user';
-                          
-                          return Align(
-                            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isUser
-                                    ? const Color(0xFF7550FF)
-                                    : const Color(0xFF363A4D),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                msg['content'] ?? '',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
-                              ),
+      body: Stack(
+        children: [
+          // --- 1. IMPORTED BACKGROUND WIDGET ---
+          const Positioned.fill(
+            child: GlowyBackground(),
+          ),
+
+          // --- 2. CHAT CONTENT ---
+          SafeArea(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : !_chatService.isModelLoaded
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'AI model not available',
+                              style: TextStyle(fontSize: 18, color: Colors.grey),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    
-                    // Input area
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF363A4D),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Go to Settings'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
                         children: [
                           Expanded(
-                            child: TextField(
-                              controller: _messageController,
-                              decoration: InputDecoration(
-                                hintText: 'Share how you\'re feeling...',
-                                hintStyle: TextStyle(color: Colors.grey[400]),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFF2A2D3A),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
-                                ),
-                              ),
-                              style: const TextStyle(color: Colors.white),
-                              maxLines: null,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (_) => _sendMessage(),
-                              enabled: !_isGenerating,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFF7550FF),
-                            child: IconButton(
-                              icon: _isGenerating
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                final msg = _messages[index];
+                                final isUser = msg['role'] == 'user';
+                                
+                                return Align(
+                                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    constraints: BoxConstraints(
+                                      maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isUser
+                                          ? const Color(0xFF7550FF).withOpacity(0.9)
+                                          : const Color(0xFF363A4D).withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.05),
                                       ),
-                                    )
-                                  : const Icon(Icons.send, color: Colors.white),
-                              onPressed: _isGenerating ? null : _sendMessage,
+                                    ),
+                                    child: Text(
+                                      msg['content'] ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
+                          
+                          // Input area
+                          _buildInputArea(),
                         ],
                       ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF363A4D).withOpacity(0.5),
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: 'Share how you\'re feeling...',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
-                  ],
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: null,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
+                  enabled: !_isGenerating,
                 ),
+              ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                backgroundColor: const Color(0xFF7550FF),
+                child: IconButton(
+                  icon: _isGenerating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.send, color: Colors.white),
+                  onPressed: _isGenerating ? null : _sendMessage,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -27,7 +27,6 @@ class LLMChatService {
     try {
       final modelPath = await _downloadService.getModelPath();
       if (modelPath == null) {
-        print('Model not downloaded yet');
         return false;
       }
 
@@ -47,7 +46,6 @@ class LLMChatService {
       print('Model loaded with context: $MAX_CONTEXT_TOKENS');
       return true;
     } catch (e) {
-      print('Error loading model: $e');
       _isModelLoaded = false;
       return false;
     }

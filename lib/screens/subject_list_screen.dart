@@ -8,6 +8,7 @@ import 'update_subject.dart';
 import 'friends_request_screen.dart'; // Add this line
 import '../widgets/notification_icon.dart';
 import 'timer_session_screen.dart';
+import 'user_settings_screen.dart';
 class SubjectsListScreen extends StatefulWidget {
   const SubjectsListScreen({super.key});
 
@@ -33,13 +34,10 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
     
     final subjectBox = Hive.box<Subject>('subjectsBox');
-    print('📦 [SubjectsListScreen] Loaded subjects: ${subjectBox.length}');
     
     // Log first subject for debugging
     if (subjectBox.isNotEmpty) {
       final firstSubject = subjectBox.values.first;
-      print('📊 [SubjectsListScreen] First subject: ${firstSubject.name}');
-      print('📊 [SubjectsListScreen] hoursCompleted: ${firstSubject.hoursCompleted}/${firstSubject.hourGoal}');
     }
     
     if (mounted) {
@@ -679,15 +677,24 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                         final displayName = (userBox.get('displayName') ?? '') as String;
                         final photoURL = (userBox.get('photoURL') ?? 'assets/images/cat.png') as String;
                         return Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: const Color(0xFF7550FF),
-                              backgroundImage: (photoURL.startsWith('http')) 
-                                  ? NetworkImage(photoURL) 
-                                  : const AssetImage('assets/images/cat.png') as ImageProvider,
-                            ),
-                            const SizedBox(width: 12),
+                  children: [
+                    // --- CHANGED: Profile Picture with Navigation Logic ---
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UserSettingsScreen()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFF7550FF),
+                        backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                            ? NetworkImage(photoURL)
+                            : const AssetImage('assets/images/cat.png') as ImageProvider,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

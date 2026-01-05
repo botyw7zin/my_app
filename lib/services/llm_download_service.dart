@@ -20,7 +20,6 @@ class LLMDownloadService {
       final file = await _getModelFile();
       return await file.exists();
     } catch (e) {
-      print('Error checking model: $e');
       return false;
     }
   }
@@ -47,21 +46,19 @@ class LLMDownloadService {
 
       // Check if already exists
       if (await file.exists()) {
-        print('Model already downloaded');
         _progressController.add(1.0);
         return true;
       }
 
-      print('Starting download from: $MODEL_URL');
+      
 
       await _dio.download(
         MODEL_URL,
         file.path,
         onReceiveProgress: (received, total) {
-          if (total != -1) {
+            if (total != -1) {
             final progress = received / total;
             _progressController.add(progress);
-            print('Download progress: ${(progress * 100).toStringAsFixed(1)}%');
           }
         },
         options: Options(
@@ -70,11 +67,10 @@ class LLMDownloadService {
         ),
       );
 
-      print('Download completed: ${file.path}');
+      
       return true;
 
     } catch (e) {
-      print('Download error: $e');
       _progressController.addError(e);
       return false;
     }
@@ -86,12 +82,10 @@ class LLMDownloadService {
       final file = await _getModelFile();
       if (await file.exists()) {
         await file.delete();
-        print('Model deleted');
         return true;
       }
       return false;
     } catch (e) {
-      print('Error deleting model: $e');
       return false;
     }
   }
@@ -106,7 +100,6 @@ class LLMDownloadService {
       }
       return null;
     } catch (e) {
-      print('Error getting model size: $e');
       return null;
     }
   }

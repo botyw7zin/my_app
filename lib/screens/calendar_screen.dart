@@ -176,7 +176,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .delete();
            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subject deleted')));
     } catch (e) {
-      debugPrint('Error deleting: $e');
     }
   }
 

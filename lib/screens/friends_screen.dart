@@ -1,10 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/friends_service.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/notification_icon.dart';
-import 'friends_request_screen.dart'; // Add this line
+import 'friends_request_screen.dart';
+import 'user_settings_screen.dart'; // <--- Added this import
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -70,7 +71,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   Future<void> _sendRequest(String userId) async {
     try {
-      print('>>> _sendRequest to: $userId, auth uid: ${FirebaseAuth.instance.currentUser?.uid}');
       await _friendService.sendFriendRequest(userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -81,8 +81,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
       );
       await _performSearch();
     } catch (e, st) {
-      print('>>> _sendRequest error: $e');
-      print(st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -348,15 +346,24 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
                 return Row(
                   children: [
-                    // Profile Picture
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF7550FF),
-                      backgroundImage: (photoURL != null && photoURL.startsWith('http'))
-                          ? NetworkImage(photoURL)
-                          : const AssetImage('assets/images/cat.png') as ImageProvider,
+                    // --- CHANGED: Profile Picture with Navigation Logic ---
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UserSettingsScreen()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFF7550FF),
+                        backgroundImage: (photoURL != null && photoURL.startsWith('http'))
+                            ? NetworkImage(photoURL)
+                            : const AssetImage('assets/images/cat.png') as ImageProvider,
+                      ),
                     ),
                     const SizedBox(width: 12),
+                    
                     // "Hello! Name" Text
                     Expanded(
                       child: Column(

@@ -60,7 +60,6 @@ class _AddSubjectScreenState extends State<AddSubjectScreen> {
 
   Future<void> _createSubject() async {
     if (_formKey.currentState!.validate()) {
-      print('>>> [AddSubjectScreen] Creating subject: ${_nameController.text}');
       try {
         await _subjectService.createSubject(
           name: _nameController.text,

@@ -65,7 +65,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
             }
           }
         } catch (e) {
-          debugPrint('>>> [TimerSession] Failed to load existing session: $e');
           if (mounted) setState(() => _sessionId = widget.sessionId);
         }
         _start();
@@ -78,7 +77,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
             });
           }
         } catch (e) {
-          debugPrint('>>> [TimerSession] Failed to create session: $e');
         }
         _start();
       }
@@ -157,7 +155,6 @@ class _TimerSessionScreenState extends State<TimerSessionScreen> {
           await _sessionService.leaveSession(_sessionId!);
         }
       } catch (e) {
-        debugPrint('Failed to update session state on finish: $e');
       }
     }
 

@@ -31,7 +31,7 @@ class AuthService {
 
   /// Initialize services after successful authentication
   Future<void> _initializePostAuthServices(String userId) async {
-    print('🔵 [_initializePostAuthServices] Initializing for user: $userId');
+    
 
     // Perform a full two-way sync: pull remote -> local and push local -> remote
     await _subjectService.syncBothWays();
@@ -39,7 +39,7 @@ class AuthService {
     // Start connectivity listener for future changes (will trigger two-way sync when back online)
     _subjectService.listenForConnectivityChanges();
 
-    print('✅ [_initializePostAuthServices] Initial two-way sync completed');
+    
   }
 
 
@@ -49,7 +49,7 @@ class AuthService {
     String username,
   ) async {
     try {
-      print('🔵 [registerWithEmail] Registering user: $email');
+      
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -78,7 +78,7 @@ class AuthService {
         await userBox.put('photoURL', defaultPhotoUrl);
 
 
-        print('✅ [registerWithEmail] Registration successful for ${user.uid}');
+        
 
 
         // Initialize post-auth services
@@ -86,10 +86,10 @@ class AuthService {
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      print('🔴 [registerWithEmail] Registration error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [registerWithEmail] Error: $e');
+      
       return null;
     }
   }
@@ -97,7 +97,7 @@ class AuthService {
 
   Future<User?> signInWithEmail(String email, String password) async {
     try {
-      print('🔵 [signInWithEmail] Signing in: $email');
+      
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -145,9 +145,7 @@ class AuthService {
         );
 
 
-        print('✅ [signInWithEmail] Signed in user: ${user.uid}');
-        print(
-            '>>> [signInWithEmail] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
+        
 
 
         // Initialize post-auth services (includes loadFromFirebase)
@@ -155,10 +153,10 @@ class AuthService {
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      print('🔴 [signInWithEmail] Sign in error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [signInWithEmail] Error: $e');
+      
       return null;
     }
   }
@@ -166,7 +164,7 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      print('🔵 [signInWithGoogle] Starting Google Sign-In');
+      
       await _ensureGoogleSignInInitialized();
 
 
@@ -177,7 +175,7 @@ class AuthService {
 
 
       if (idToken == null) {
-        print('🔴 [signInWithGoogle] Failed to get ID token');
+        
         return null;
       }
 
@@ -218,9 +216,7 @@ class AuthService {
         await userBox.put('photoURL', googlePhotoUrl);
 
 
-        print('✅ [signInWithGoogle] Signed in user: ${user.uid}');
-        print(
-            '>>> [signInWithGoogle] current auth uid for friends: ${FirebaseAuth.instance.currentUser?.uid}');
+        
 
 
         // Initialize post-auth services (includes loadFromFirebase)
@@ -230,13 +226,13 @@ class AuthService {
 
       return user;
     } on GoogleSignInException catch (e) {
-      print('🔴 [signInWithGoogle] Google Sign-In error: ${e.code} - ${e.description}');
+      
       return null;
     } on FirebaseAuthException catch (e) {
-      print('🔴 [signInWithGoogle] Firebase auth error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [signInWithGoogle] Unexpected error: $e');
+      
       return null;
     }
   }
@@ -244,12 +240,12 @@ class AuthService {
 
   Future<void> signOut(BuildContext context) async {
     try {
-      print('🔵 [signOut] Starting sign out process');
+      
 
 
       // Cancel all background sync tasks
       await _subjectService.cancelBackgroundSync();
-      print('✅ [signOut] Background sync tasks cancelled');
+      
 
 
       // Sign out from Google and Firebase
@@ -263,7 +259,7 @@ class AuthService {
       await _subjectService.clearLocalData();
 
 
-      print('✅ [signOut] Signed out, cache cleared.');
+      
 
 
       if (context.mounted) {
@@ -274,7 +270,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('❌ [signOut] Sign out error: $e');
+      
       rethrow;
     }
   }
@@ -283,14 +279,14 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      print('🔵 [sendPasswordResetEmail] Sending reset email to: $email');
+      
       await _auth.sendPasswordResetEmail(email: email);
-      print('✅ [sendPasswordResetEmail] Password reset email sent');
+      
     } on FirebaseAuthException catch (e) {
-      print('🔴 [sendPasswordResetEmail] Error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [sendPasswordResetEmail] Unexpected error: $e');
+      
       rethrow;
     }
   }
@@ -302,12 +298,12 @@ class AuthService {
     String newPassword,
   ) async {
     try {
-      print('🔵 [changePassword] Attempting to change password');
+      
       final user = _auth.currentUser;
 
 
       if (user == null) {
-        print('🔴 [changePassword] No user logged in');
+        
         throw FirebaseAuthException(
           code: 'no-user',
           message: 'No user is currently logged in',
@@ -323,17 +319,17 @@ class AuthService {
 
 
       await user.reauthenticateWithCredential(credential);
-      print('✅ [changePassword] User re-authenticated successfully');
+      
 
 
       // Update password
       await user.updatePassword(newPassword);
-      print('✅ [changePassword] Password changed successfully');
+      
     } on FirebaseAuthException catch (e) {
-      print('🔴 [changePassword] Auth error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [changePassword] Unexpected error: $e');
+      
       rethrow;
     }
   }
@@ -353,10 +349,10 @@ class AuthService {
       final box = Hive.box('userBox');
       await box.put('email', newEmail);
     } on FirebaseAuthException catch (e) {
-      print('🔴 [changeEmail] Auth error: ${e.code} - ${e.message}');
+      
       rethrow;
     } catch (e) {
-      print('🔴 [changeEmail] Unexpected error: $e');
+      
       rethrow;
     }
   }
