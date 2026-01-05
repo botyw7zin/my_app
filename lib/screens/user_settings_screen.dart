@@ -388,7 +388,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const ModelDownloadPage(),
+                                        builder: (context) => const ModelDownloadScreen(),
                                       ),
                                     );
                                   },
