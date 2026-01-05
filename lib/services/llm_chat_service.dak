@@ -2,48 +2,50 @@ import 'dart:async';
 import 'package:llama_flutter_android/llama_flutter_android.dart';
 import 'llm_download_service.dart';
 
+
 class LLMChatService {
   LlamaController? _llamaController;
   final LLMDownloadService _downloadService = LLMDownloadService();
 
+
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
 
-  // System prompt for emotional support
-  static const String SYSTEM_PROMPT = """You are a caring and empathetic AI assistant designed to help students with stress, exams, and emotional well-being. Your role is to:
-- Provide reassurance and encouragement
-- Help students manage exam anxiety and stress
-- Offer practical study tips when needed
-- Listen without judgment
-- Give nurturing, supportive responses
-- Keep responses concise and friendly
 
-Always be warm, understanding, and positive.""";
+  // Optimized for mobile speed - smaller is faster
+  static const int MAX_CONTEXT_TOKENS = 256;  // Further reduced for speed
+  static const int MAX_RESPONSE_TOKENS = 150; // Shorter responses = faster
+  static const int RESERVED_TOKENS = MAX_RESPONSE_TOKENS + 30; 
+  static const int AVAILABLE_HISTORY_TOKENS = MAX_CONTEXT_TOKENS - RESERVED_TOKENS;
 
-  // Load the model
+
+  // Minimal system prompt saves processing time
+  static const String SYSTEM_PROMPT = """You are a supportive AI helping students. Be warm and concise.""";
+
+
   Future<bool> loadModel() async {
     try {
-      // Check if model is downloaded
       final modelPath = await _downloadService.getModelPath();
       if (modelPath == null) {
         print('Model not downloaded yet');
         return false;
       }
 
-      // Initialize controller if not already done
+
       _llamaController ??= LlamaController();
 
-      // Load the model - parameters go in generate(), not loadModel()
+
+      // Optimized loading parameters for speed
       await _llamaController!.loadModel(
         modelPath: modelPath,
-        contextSize: 2048,
-        threads: 4,
+        contextSize: MAX_CONTEXT_TOKENS,
+        threads: 2,  // Reduced from 4 - better for mobile
       );
 
-      _isModelLoaded = true;
-      print('Model loaded successfully');
-      return true;
 
+      _isModelLoaded = true;
+      print('Model loaded with context: $MAX_CONTEXT_TOKENS');
+      return true;
     } catch (e) {
       print('Error loading model: $e');
       _isModelLoaded = false;
@@ -51,111 +53,217 @@ Always be warm, understanding, and positive.""";
     }
   }
 
-  // Generate response with streaming
+
+  int _estimateTokens(String text) {
+    return (text.length / 4).ceil();
+  }
+
+
+  // Keep only last 2 exchanges maximum
+  List<Map<String, String>> _manageContextWindow(
+    List<Map<String, String>> conversationHistory,
+    String currentMessage,
+  ) {
+    final systemTokens = _estimateTokens(SYSTEM_PROMPT);
+    final currentMessageTokens = _estimateTokens(currentMessage);
+    
+    int availableForHistory = AVAILABLE_HISTORY_TOKENS - systemTokens - currentMessageTokens;
+    
+    if (availableForHistory <= 0) {
+      return [];
+    }
+
+
+    // Keep only last 4 messages (2 exchanges) for speed
+    final recentHistory = conversationHistory.length > 4 
+        ? conversationHistory.sublist(conversationHistory.length - 4)
+        : conversationHistory;
+
+
+    final List<Map<String, String>> fittingHistory = [];
+    int usedTokens = 0;
+
+
+    for (int i = recentHistory.length - 1; i >= 0; i--) {
+      final message = recentHistory[i];
+      final messageText = '${message['role']}: ${message['content']}';
+      final messageTokens = _estimateTokens(messageText);
+
+
+      if (usedTokens + messageTokens <= availableForHistory) {
+        fittingHistory.insert(0, message);
+        usedTokens += messageTokens;
+      } else {
+        break;
+      }
+    }
+
+
+    return fittingHistory;
+  }
+
+
   Stream<String> generateResponse(String userMessage, List<Map<String, String>> conversationHistory) async* {
     if (!_isModelLoaded || _llamaController == null) {
-      yield 'Error: Model not loaded. Please download the AI model from settings.';
+      yield 'Please download the AI model from settings first.';
       return;
     }
 
-    try {
-      // Build conversation context
-      final prompt = _buildPrompt(userMessage, conversationHistory);
 
-      // Generate response with streaming - parameters go here
+    try {
+      final managedHistory = _manageContextWindow(conversationHistory, userMessage);
+      final prompt = _buildPrompt(userMessage, managedHistory);
+      
+      print('Generating with ~${_estimateTokens(prompt)} tokens');
+
+
+      final buffer = StringBuffer();
+      int tokenCount = 0;
+      bool hasYielded = false;
+
+
       await for (final token in _llamaController!.generate(
         prompt: prompt,
-        maxTokens: 512,
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.9,
-        repeatPenalty: 1.1,
+        maxTokens: MAX_RESPONSE_TOKENS,
+        temperature: 0.8,      // Slightly higher for variety
+        topK: 30,              // Reduced for faster sampling
+        topP: 0.92,            // Adjusted for balance
+        repeatPenalty: 1.05,
       )) {
+        tokenCount++;
+        hasYielded = true;
+        
+        // Check for stop patterns less frequently (every 5 tokens)
+        if (tokenCount % 5 == 0 && _shouldStopGeneration(buffer.toString() + token)) {
+          break;
+        }
+        
+        buffer.write(token);
         yield token;
       }
 
+
+      if (!hasYielded || buffer.isEmpty) {
+        yield 'I had trouble responding. Try a shorter message.';
+      }
     } catch (e) {
-      print('Error generating response: $e');
-      yield 'I apologize, but I encountered an error. Please try again.';
+      print('Generation error: $e');
+      yield 'Error occurred. Please try again with a shorter message.';
     }
   }
 
-  // Build prompt with conversation history
+
+  bool _shouldStopGeneration(String currentText) {
+    // Very simple stop check - only on double newlines
+    return currentText.contains('\n\nUser:') || 
+           currentText.contains('\n\nHuman:') ||
+           currentText.length > 800; // Hard limit for safety
+  }
+
+
   String _buildPrompt(String userMessage, List<Map<String, String>> history) {
     final buffer = StringBuffer();
+    buffer.write(SYSTEM_PROMPT);
+    buffer.write('\n\n');
 
-    // Add system prompt
-    buffer.writeln('System: $SYSTEM_PROMPT\n');
 
-    // Add conversation history (last 5 messages to stay within context)
-    final recentHistory = history.length > 5 ? history.sublist(history.length - 5) : history;
-    for (final msg in recentHistory) {
-      final role = msg['role'] == 'user' ? 'User' : 'Assistant';
-      buffer.writeln('$role: ${msg['content']}\n');
+    // Add only managed history
+    for (final msg in history) {
+      buffer.write('${msg['role'] == 'user' ? 'User' : 'Assistant'}: ${msg['content']}\n');
     }
 
-    // Add current user message
-    buffer.writeln('User: $userMessage\n');
-    buffer.write('Assistant:');
 
+    buffer.write('User: $userMessage\nAssistant:');
     return buffer.toString();
   }
 
-  // Simple non-streaming response (for simpler use cases)
+
   Future<String> generateSimpleResponse(String userMessage) async {
     if (!_isModelLoaded || _llamaController == null) {
-      return 'Error: Model not loaded. Please download the AI model from settings.';
+      return 'Please download the AI model from settings.';
     }
 
+
     try {
-      final prompt = 'System: $SYSTEM_PROMPT\n\nUser: $userMessage\n\nAssistant:';
+      // Truncate very long messages
+      final truncatedMessage = userMessage.length > 200 
+          ? userMessage.substring(0, 200) 
+          : userMessage;
+          
+      final prompt = '$SYSTEM_PROMPT\n\nUser: $truncatedMessage\nAssistant:';
+
+
       final buffer = StringBuffer();
+      int tokenCount = 0;
+
 
       await for (final token in _llamaController!.generate(
         prompt: prompt,
-        maxTokens: 512,
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.9,
-        repeatPenalty: 1.1,
+        maxTokens: MAX_RESPONSE_TOKENS,
+        temperature: 0.8,
+        topK: 30,
+        topP: 0.92,
+        repeatPenalty: 1.05,
       )) {
+        tokenCount++;
+        if (tokenCount % 5 == 0 && _shouldStopGeneration(buffer.toString() + token)) {
+          break;
+        }
         buffer.write(token);
       }
 
-      return buffer.toString().trim();
 
+      final response = buffer.toString().trim();
+      return response.isNotEmpty ? response : 'Try a shorter message.';
     } catch (e) {
-      print('Error generating response: $e');
-      return 'I apologize, but I encountered an error. Please try again.';
+      print('Error: $e');
+      return 'Error occurred. Please try a shorter message.';
     }
   }
 
-  // Stop generation mid-process
+
+  Map<String, dynamic> getContextStats(List<Map<String, String>> history, String currentMessage) {
+    final managedHistory = _manageContextWindow(history, currentMessage);
+    final prompt = _buildPrompt(currentMessage, managedHistory);
+    final promptTokens = _estimateTokens(prompt);
+    
+    return {
+      'totalMessages': history.length,
+      'fittingMessages': managedHistory.length,
+      'droppedMessages': history.length - managedHistory.length,
+      'estimatedPromptTokens': promptTokens,
+      'maxContextTokens': MAX_CONTEXT_TOKENS,
+      'availableResponseTokens': MAX_RESPONSE_TOKENS,
+      'contextUsagePercent': ((promptTokens / MAX_CONTEXT_TOKENS) * 100).toStringAsFixed(1),
+    };
+  }
+
+
   Future<void> stopGeneration() async {
     try {
       await _llamaController?.stop();
     } catch (e) {
-      print('Error stopping generation: $e');
+      print('Stop error: $e');
     }
   }
 
-  // Unload model to free memory
+
   Future<void> unloadModel() async {
     try {
       await _llamaController?.dispose();
       _llamaController = null;
       _isModelLoaded = false;
-      print('Model unloaded');
     } catch (e) {
-      print('Error unloading model: $e');
+      print('Unload error: $e');
     }
   }
 
-  // Check if model is available for use
+
   Future<bool> isModelAvailable() async {
     final modelPath = await _downloadService.getModelPath();
     return modelPath != null;
   }
+
 
   void dispose() {
     unloadModel();
