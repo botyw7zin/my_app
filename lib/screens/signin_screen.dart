@@ -23,6 +23,52 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // --- NEW: Custom Error Dialog Helper ---
+  Future<void> _showErrorDialog(String title, String message) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // User must tap button to close
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF282C33),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.redAccent, width: 1),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.redAccent),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.white70, fontSize: 15),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                'Try Again',
+                style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _signInWithEmail() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -34,11 +80,35 @@ class _LoginScreenState extends State<LoginScreen> {
         if (user != null && mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
-      } finally {
+} catch (e) {
+        // --- IMPROVED ERROR MESSAGING ---
+        String errorMessage = "An unexpected error occurred. Please check your connection.";
+        String errorString = e.toString().toLowerCase();
+
+        // Check for specific error codes
+        if (errorString.contains('user-not-found')) {
+          errorMessage = "No account found with this email.";
+        } 
+        // FIX: Added 'invalid-credential' and 'invalid-login-credentials'
+        else if (errorString.contains('wrong-password') || 
+                 errorString.contains('invalid-credential') ||
+                 errorString.contains('invalid-login-credentials')) {
+          errorMessage = "The email or password you entered is incorrect.";
+        } 
+        else if (errorString.contains('invalid-email')) {
+          errorMessage = "The email address is badly formatted.";
+        } 
+        else if (errorString.contains('network-request-failed')) {
+          errorMessage = "Please check your internet connection.";
+        } 
+        else if (errorString.contains('too-many-requests')) {
+          errorMessage = "Too many failed attempts. Please try again later.";
+        }
+
+        if (mounted) {
+          _showErrorDialog("Login Failed", errorMessage);
+        }
+      }finally {
         if (mounted) setState(() => _isLoading = false);
       }
     }
@@ -52,9 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed: $e')),
-      );
+      if (mounted) {
+        // Also applied the dialog here for consistency
+        _showErrorDialog("Google Sign-In Failed", "Could not connect to Google. Please try again.");
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -103,6 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ElevatedButton(
             onPressed: () async {
               if (emailController.text.trim().isEmpty) {
+                // Keep SnackBar here for simple validation inside the dialog
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please enter your email')),
                 );
@@ -118,15 +190,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SnackBar(
                       content: Text('Password reset email sent! Check your inbox.'),
                       duration: Duration(seconds: 3),
+                      backgroundColor: Colors.green,
                     ),
                   );
                 }
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
+                 // Close the reset dialog first
+                 Navigator.pop(context);
+                 if (mounted) {
+                   // Show the detailed error dialog
+                   _showErrorDialog("Reset Failed", "Could not send reset email. Please verify the address.");
+                 }
               } finally {
                 if (mounted) setState(() => _isLoading = false);
               }

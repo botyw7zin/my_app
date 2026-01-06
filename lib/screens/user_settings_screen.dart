@@ -5,30 +5,72 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/background.dart';
-import 'model_download_page.dart'; // Add this import
-
+import 'model_download_page.dart';
 
 class UserSettingsScreen extends StatefulWidget {
   const UserSettingsScreen({super.key});
 
-
   @override
   State<UserSettingsScreen> createState() => _UserSettingsScreenState();
 }
-
 
 class _UserSettingsScreenState extends State<UserSettingsScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   final AuthService _authService = AuthService();
 
-
   String get _uid => _auth.currentUser?.uid ?? '';
 
+  // --- NEW: Custom Error Dialog Helper ---
+  Future<void> _showErrorDialog(String title, String message) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF282C33), // Dark theme
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.redAccent, width: 1),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.redAccent),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.white70, fontSize: 15),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<void> _updatePhoto() async {
     final box = Hive.box('userBox');
     final controller = TextEditingController(text: box.get('photoURL') as String? ?? '');
+    
     final res = await showDialog<String?>(
       context: context,
       builder: (context) => AlertDialog(
@@ -58,8 +100,8 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       ),
     );
 
-
     if (res == null) return;
+
     try {
       if (_uid.isNotEmpty) {
         await _auth.currentUser?.updatePhotoURL(res);
@@ -67,16 +109,22 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       }
       await box.put('photoURL', res);
       if (mounted) setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
+      
+      // Success can still be a subtle SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo updated successfully'), backgroundColor: Colors.green),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update photo: $e')));
+      if (mounted) {
+        _showErrorDialog("Update Failed", "Could not update your profile photo. Please check your internet connection.");
+      }
     }
   }
-
 
   Future<void> _updateUsername() async {
     final box = Hive.box('userBox');
     final controller = TextEditingController(text: box.get('displayName') as String? ?? '');
+    
     final newName = await showDialog<String?>(
       context: context,
       builder: (context) => AlertDialog(
@@ -106,8 +154,8 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       ),
     );
 
-
     if (newName == null || newName.isEmpty) return;
+    
     try {
       if (_uid.isNotEmpty) {
         await _auth.currentUser?.updateDisplayName(newName);
@@ -118,15 +166,18 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       }
       await box.put('displayName', newName);
       if (mounted) setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username updated')));
+      
+      
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update username: $e')));
+      if (mounted) {
+        _showErrorDialog("Update Failed", "Could not update username. Please try again later.");
+      }
     }
   }
 
-
   Future<void> _updateEmail() async {
     final controller = TextEditingController(text: _auth.currentUser?.email ?? '');
+    
     final newEmail = await showDialog<String?>(
       context: context,
       builder: (context) => AlertDialog(
@@ -156,24 +207,36 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       ),
     );
 
-
     if (newEmail == null || newEmail.isEmpty) return;
+    
     try {
       await _authService.changeEmail(newEmail);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email updated')));
-    } on FirebaseAuthException catch (e) {
-      String msg = e.message ?? e.code;
-      if (e.code == 'requires-recent-login') msg = 'Please re-login and try again';
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update email: $msg')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email updated successfully'), backgroundColor: Colors.green),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update email: $e')));
+      // --- Improved Email Error Handling ---
+      String errorMessage = "Failed to update email. Please try again.";
+      String errorString = e.toString().toLowerCase();
+
+      if (errorString.contains('email-already-in-use')) {
+        errorMessage = "This email is already associated with another account.";
+      } else if (errorString.contains('invalid-email')) {
+        errorMessage = "Please enter a valid email address.";
+      } else if (errorString.contains('requires-recent-login')) {
+        errorMessage = "For security reasons, please log out and log back in before changing your email.";
+      }
+
+      if (mounted) {
+        _showErrorDialog("Email Update Failed", errorMessage);
+      }
     }
   }
-
 
   Future<void> _changePassword() async {
     final currentController = TextEditingController();
     final newController = TextEditingController();
+    
     final res = await showDialog<bool?>(
       context: context,
       builder: (context) => AlertDialog(
@@ -221,25 +284,44 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       ),
     );
 
-
     if (res != true) return;
+    
     final current = currentController.text;
     final nw = newController.text;
+    
     try {
       await _authService.changePassword(current, nw);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password changed successfully'), backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to change password: $e')));
+      // --- Improved Password Error Handling ---
+      String errorMessage = "Failed to change password. Please try again.";
+      String errorString = e.toString().toLowerCase();
+
+      if (errorString.contains('wrong-password') || errorString.contains('invalid-credential')) {
+        errorMessage = "The current password you entered is incorrect.";
+      } else if (errorString.contains('weak-password')) {
+        errorMessage = "The new password is too weak. Please use at least 6 characters.";
+      } else if (errorString.contains('requires-recent-login')) {
+        errorMessage = "For security reasons, please log out and log back in before changing your password.";
+      } else if (errorString.contains('network-request-failed')) {
+        errorMessage = "Please check your internet connection.";
+      }
+
+      if (mounted) {
+        _showErrorDialog("Password Change Failed", errorMessage);
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     final box = Hive.box('userBox');
     final displayName = (box.get('displayName') ?? '') as String;
     final photoURL = (box.get('photoURL') as String?) ?? '';
-
 
     return Scaffold(
       backgroundColor: const Color(0xFF1F2232),
@@ -248,14 +330,12 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
           // 1. Glowy Background
           const GlowyBackground(),
 
-
           // 2. Content Layer
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-
 
                 // --- HEADER WITH BACK BUTTON ---
                 Padding(
@@ -279,9 +359,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                   ),
                 ),
 
-
                 const SizedBox(height: 30),
-
 
                 // --- SCROLLABLE CONTENT ---
                 Expanded(
@@ -350,7 +428,6 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                           ),
                           const SizedBox(height: 40),
 
-
                           // Settings header
                           const Padding(
                             padding: EdgeInsets.only(left: 6.0, bottom: 12.0),
@@ -360,7 +437,6 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                             ),
                           ),
                           const SizedBox(height: 18),
-
 
                           // Buttons area
                           Center(
@@ -406,7 +482,6 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                   ),
                 ),
 
-
                 // --- LOGOUT BUTTON (PINNED BOTTOM) ---
                 Center(
                   child: Padding(
@@ -429,7 +504,6 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     );
   }
 }
-
 
 // Styled outlined button used on settings page
 class _OutlineActionButton extends StatelessWidget {

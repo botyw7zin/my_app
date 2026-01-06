@@ -8,7 +8,7 @@ import '../services/auth_service.dart';
 import 'friends_request_screen.dart';
 import 'incoming_sessions_screen.dart';
 import 'user_settings_screen.dart';
-import 'support_chat_screen.dart'; // Add this import
+import 'support_chat_screen.dart';
 import '../services/subject_service.dart';
 import '../services/friends_service.dart';
 import '../services/session_service.dart';
@@ -224,12 +224,34 @@ class _HomeState extends State<Home> {
                 padding: const EdgeInsets.only(bottom: 40),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SupportChatScreen(),
-                      ),
-                    );
+                    // --- UPDATED LOGIC ---
+                    // Check if model is downloaded (ensure your Download page sets this key to true)
+                    final box = Hive.box('userBox');
+                    final bool isModelInstalled = box.get('isModelDownloaded', defaultValue: false);
+
+                    if (isModelInstalled) {
+                      // Navigate to Chat
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SupportChatScreen(),
+                        ),
+                      );
+                    } else {
+                      // Show warning and navigate to Settings
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please download the AI model in Settings first.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserSettingsScreen(),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     width: 280,
