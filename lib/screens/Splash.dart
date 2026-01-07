@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/widgets/custom_button.dart';
@@ -104,7 +106,7 @@ class _SplashPageState extends State<SplashPage> {
                           child: _showButton
                               ? CustomButton(
                                   text: 'LET\'S START',
-                                  width: 331,
+                                  width: double.infinity,
                                   height: 52,
                                   fontSize: 20,
                                   backgroundColor: const Color(0xFF7550FF),
@@ -114,7 +116,7 @@ class _SplashPageState extends State<SplashPage> {
                                   iconAsset: 'assets/images/Arrow - Left.png',
                                 )
                               : const SizedBox(
-                                  width: 331,
+                                  width: double.infinity,
                                   height: 52,
                                   child: Center(
                                     child: CircularProgressIndicator(
