@@ -73,7 +73,7 @@ class _SplashPageState extends State<SplashPage> {
                   ),
                   // ----------------------------
 
-                  const SizedBox(height: 170), // Push content to bottom
+                  const SizedBox(height: 125), // Push content to bottom
 
                   // Bottom content
                   Padding(

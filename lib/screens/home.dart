@@ -227,7 +227,7 @@ class _HomeState extends State<Home> {
                     // --- UPDATED LOGIC ---
                     // Check if model is downloaded (ensure your Download page sets this key to true)
                     final box = Hive.box('userBox');
-                    final bool isModelInstalled = box.get('isModelDownloaded', defaultValue: false);
+                    final bool isModelInstalled = box.get('isModelDownloaded', defaultValue: true);
 
                     if (isModelInstalled) {
                       // Navigate to Chat

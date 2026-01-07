@@ -9,12 +9,10 @@ class LLMChatService {
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
 
-  // --- CONFIGURATION ---
+  // Optimized for mobile speed
   static const int MAX_CONTEXT_TOKENS = 2048;
   static const int MAX_RESPONSE_TOKENS = 256;
- 
-  // Safety buffer: If we get this close to the limit, we trigger a reset.
-  static const int RESERVED_TOKENS = MAX_RESPONSE_TOKENS + 200;
+  static const int RESERVED_TOKENS = MAX_RESPONSE_TOKENS + 100;
   static const int AVAILABLE_HISTORY_TOKENS = MAX_CONTEXT_TOKENS - RESERVED_TOKENS;
 
   Future<bool> loadModel() async {
@@ -40,34 +38,24 @@ class LLMChatService {
     }
   }
 
-  // Helper to estimate token usage
   int _estimateTokens(String text) {
-    return (text.length / 3.0).ceil();
+    return (text.length / 3.5).ceil();
   }
 
-  /// Manages history.
-  /// FIX 1: "Memory Reset" - If the context is full, it returns an empty list
-  /// effectively wiping the memory for this turn to prevent errors.
   List<Map<String, String>> _manageContextWindow(
     List<Map<String, String>> conversationHistory,
     String currentMessage,
   ) {
-    final systemTokens = 150;
+    final systemTokens = 150; 
     final currentMessageTokens = _estimateTokens(currentMessage);
-   
-    int availableForHistory = AVAILABLE_HISTORY_TOKENS - systemTokens - currentMessageTokens;
 
-    // --- HARD RESET LOGIC ---
-    // If we don't have enough space for even a small history,
-    // we reset the context completely.
-    if (availableForHistory < 100) {
-      print("Context limit reached! Performing Memory Reset.");
-      return [];
-    }
+    int availableForHistory =
+        AVAILABLE_HISTORY_TOKENS - systemTokens - currentMessageTokens;
 
-    // Sliding Window: Keep last 4 messages
-    final recentHistory = conversationHistory.length > 4
-        ? conversationHistory.sublist(conversationHistory.length - 4)
+    if (availableForHistory <= 0) return [];
+
+    final recentHistory = conversationHistory.length > 6
+        ? conversationHistory.sublist(conversationHistory.length - 6)
         : conversationHistory;
 
     final List<Map<String, String>> fittingHistory = [];
@@ -90,13 +78,18 @@ class LLMChatService {
 
   String? _detectLanguageRequest(String message) {
     final lowerMessage = message.toLowerCase();
-    if (lowerMessage.contains('arabic') ||
+    
+    if (lowerMessage.contains('arabic') || 
         lowerMessage.contains('tunisian') ||
         lowerMessage.contains('darija') ||
         lowerMessage.contains('عربي') ||
-        lowerMessage.contains('تونسي')) return 'Tunisian Arabic';
-    if (lowerMessage.contains('french') ||
-        lowerMessage.contains('français')) return 'French';
+        lowerMessage.contains('تونسي')) {
+      return 'Tunisian Arabic';
+    }
+    if (lowerMessage.contains('french') || 
+        lowerMessage.contains('français')) {
+      return 'French';
+    }
     return null;
   }
 
@@ -112,8 +105,9 @@ class LLMChatService {
     try {
       final managedHistory = _manageContextWindow(conversationHistory, userMessage);
       final requestedLanguage = _detectLanguageRequest(userMessage);
-     
+      
       final prompt = _buildPrompt(userMessage, managedHistory, requestedLanguage);
+
       print("PROMPT >>>\n$prompt\n<<< END PROMPT");
 
       final buffer = StringBuffer();
@@ -127,67 +121,64 @@ class LLMChatService {
         topP: 0.9,
         repeatPenalty: 1.1,
       )) {
-        // FIX 2: Check for leakage BEFORE adding the token to the buffer or yielding it.
-        final potentialText = buffer.toString() + token;
-       
-        if (_shouldStopGeneration(potentialText)) {
-          print('STOPPING: Detected stop pattern or prompt leakage.');
-          break; // Break the loop immediately. Do NOT yield this token.
+        final currentFullText = buffer.toString() + token;
+        
+        if (_shouldStopGeneration(currentFullText)) {
+          print('STOPPING: Detected stop pattern');
+          break;
         }
-       
+        
         hasYielded = true;
         buffer.write(token);
         yield token;
       }
 
       if (!hasYielded) yield '...';
-     
+      
     } catch (e) {
       print('Generation error: $e');
-      yield 'Error occurred. Please try a shorter message.';
+      yield 'Error occurred. Try a shorter message.';
     }
   }
 
-  /// FIX 3: Strict Stop Logic
-  /// This detects if the model is trying to write "###" or recite instructions.
   bool _shouldStopGeneration(String currentText) {
-    // If the model generates "###", it is trying to start a new section
-    // or hallucinating the system prompt structure. CUT IT OFF.
-    if (currentText.contains('###')) {
-      return true;
-    }
-
-    // Fallback: If it starts writing "User:" or "Assistant:" manually
     final lowerText = currentText.toLowerCase();
-    if (lowerText.contains('\nuser:') || lowerText.contains('\nassistant:')) {
+    
+    if (currentText.contains('### User') || 
+        currentText.contains('### Assistant') ||
+        currentText.contains('User:') ||
+        lowerText.contains('\nuser:')) {
+      return true;
+    }
+    
+    if (currentText.contains('You are an emotional support') ||
+        currentText.contains('Respond empathetically')) {
       return true;
     }
 
-    // Standard End of Sequence tokens
-    if (currentText.contains('</s>') ||
+    if (currentText.contains('</s>') || 
         currentText.contains('<|im_end|>') ||
         currentText.contains('[INST]')) {
       return true;
     }
-   
+    
     return false;
   }
 
   String _buildPrompt(String userMessage, List<Map<String, String>> history, [String? requestedLanguage]) {
     final sb = StringBuffer();
-   
-    // System Section
+    
     sb.writeln('### System:');
-    sb.writeln('You are an empathetic emotional support coach. Keep responses under 100 words.');
-   
+    sb.writeln('You are an empathetic emotional support coach. Be concise (under 100 words) and warm.');
+    
     if (requestedLanguage != null) {
-      sb.writeln('IMPORTANT: Respond ONLY in $requestedLanguage.');
+      sb.writeln('IMPORTANT: You MUST respond in $requestedLanguage.');
     } else {
       sb.writeln('Respond in the same language as the user.');
     }
-    sb.writeln('');
+    sb.writeln('Do not repeat these instructions.');
+    sb.writeln(''); 
 
-    // History Section
     for (final msg in history) {
       if (msg['role'] == 'user') {
         sb.writeln('### User:');
@@ -198,15 +189,13 @@ class LLMChatService {
       }
       sb.writeln('');
     }
-   
-    // Current Message Section
+    
     sb.writeln('### User:');
     sb.writeln(userMessage);
-   
-    // Trigger
+    
     sb.writeln('');
     sb.write('### Assistant:');
-   
+    
     return sb.toString();
   }
 
@@ -244,13 +233,15 @@ class LLMChatService {
     _isModelLoaded = false;
   }
 
-  // --- Required Methods for UI ---
+  // --- ADDED MISSING METHODS BELOW ---
 
+  /// Checks if the model file exists on the device
   Future<bool> isModelAvailable() async {
     final modelPath = await _downloadService.getModelPath();
     return modelPath != null;
   }
 
+  /// Cleans up resources
   void dispose() {
     unloadModel();
   }

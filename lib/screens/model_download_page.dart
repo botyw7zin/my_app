@@ -180,7 +180,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'SmolLM2 Emotional Support Model',
+                            ' Emotional Support Model ',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
