@@ -157,7 +157,7 @@ class LLMChatService {
            currentText.contains('\n\nHuman:') ||
            currentText.length > 800; // Hard limit for safety
   }
-
+ 
 
   String _buildPrompt(String userMessage, List<Map<String, String>> history) {
     final buffer = StringBuffer();
