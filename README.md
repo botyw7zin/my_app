@@ -4,7 +4,7 @@
 
 ---
 
-## Key Features (for quick grading)
+## Key Features
 
 - **User auth:** Email/password and Google Sign-In
 - **Subject management:** Create, edit, delete subjects; attach notes and progress indicators
