@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/llm_chat_service.dak';
+import '../services/llm_chat_service.dart';
 import '../widgets/background.dart';
 import 'model_download_page.dart';
 
