@@ -200,7 +200,7 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'type',
+                        'Type',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -243,11 +243,11 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
                                   items: const [
                                     DropdownMenuItem(
                                       value: 'personal',
-                                      child: Text('personal'),
+                                      child: Text('Personal'),
                                     ),
                                     DropdownMenuItem(
                                       value: 'study',
-                                      child: Text('study'),
+                                      child: Text('Study'),
                                     ),
                                   ],
                                   onChanged: (value) {
@@ -271,7 +271,7 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
 
                   // Subject Name
                   _buildInputField(
-                    label: 'subject or Project Name',
+                    label: 'Subject or Project Name',
                     controller: _nameController,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -301,7 +301,7 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'objective',
+                        'Objective',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -370,7 +370,7 @@ class _UpdateSubjectScreenState extends State<UpdateSubjectScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'deadline',
+                          'Deadline',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 14,

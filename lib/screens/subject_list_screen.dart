@@ -812,7 +812,7 @@ class _SubjectsListScreenState extends State<SubjectsListScreen> {
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'Subjects - projects',
+                                  'Subjects- Projects',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 24,

@@ -404,7 +404,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 const Padding(
                   padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                   child: Text(
-                    'invite a friend',
+                    'Invite a friend',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -416,7 +416,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   controller: _searchController,
                   style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                    hintText: 'friend username',
+                    hintText: 'Friend username',
                     hintStyle: const TextStyle(color: Colors.grey),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.arrow_forward_ios, color: Colors.black, size: 16),

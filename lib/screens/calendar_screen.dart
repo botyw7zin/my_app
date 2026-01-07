@@ -212,7 +212,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ),
                       const Text(
-                        'calendar', 
+                        'Calendar', 
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
