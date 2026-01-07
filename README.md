@@ -1,43 +1,32 @@
-# StudySync — Features & Install Guide 📚🔒
+# StudySync — Feature Overview (Teacher-Friendly)
 
-**Short description:** StudySync helps students create and manage study subjects, save notes, and track progress. The app is built with privacy and portability in mind — all core features and an optional AI assistant can run entirely on-device (no external LLM calls required).
-
----
-
-## Key Features
-
-- **User auth:** Email/password and Google Sign-In
-- **Subject management:** Create, edit, delete subjects; attach notes and progress indicators
-- **Offline-first:** Local persistence using **Hive** so the app fully works without network
-- **Background sync (optional):** Syncs local changes to **Cloud Firestore** when online (Android WorkManager)
-- **Local AI assistant (emotional support):** A local AI model is available to install and run on-device for private, offline emotional support and study tips
-- **Model downloads (Dio):** The app uses **Dio** primarily to download the local AI model into on-device storage so the assistant can run fully offline for privacy and portability
-- **Privacy & portability:** All data and AI processing can remain on-device for maximum user privacy and easy portability between devices
+StudySync is a privacy-focused study helper that lets students create and manage study subjects, save notes, track progress, and use an optional on-device AI assistant for emotional support and study tips. The app is designed to work fully offline by default and offers optional cloud sync for convenience.
 
 ---
 
-## Local AI Model — Quick Notes
+## Core Features (concise, descriptive)
 
-- A **local AI model** (pretrained) for emotional support and study help is available in the project's **Kaggle** repository and can be installed on-device for private, offline use.
-- For quick demos or grading, the repo also includes a mock LLM (`lib/services/mock_llm_chat_service.dart`) that allows the chat UI to work on an emulator.
-- Install the real model (step-by-step):
-  1. **Test on a physical device.** Local model downloads and runtime are device-dependent.
-  2. Open **Settings** in the app and press **Download AI Assistant**. The in-app downloader (Dio) will fetch the model from the project's Kaggle repo (ensure the dataset is public or the download URL is reachable).
-  3. Wait for download completion; the model will be saved to the app's local storage (e.g., `assets/models/local_ai/` or the app data folder).
+- User Accounts (Email & Google)
+  - Secure sign-in options so students can use the app with familiar credentials. Sessions persist so users don't need to sign in every time.
 
+- Subject CRUD (Create, Read, Update, Delete)
+  - Quickly add a subject with a title, description, and progress indicator. Edit notes and progress at any time and remove subjects when finished. All changes are saved locally immediately for a responsive experience.
 
-Note: After installation the model runs offline
+- Offline-First Storage
+  - The app stores all content on the device so it remains usable without network access. Edits are immediate and persist across app restarts, making it reliable in low-connectivity environments.
 
-## Install & Run (minimal, exact steps)
+- Optional Background Sync
+  - When enabled, local changes are synchronized to a cloud backend in the background so the user's data can be backed up and shared between devices without interrupting their workflow.
 
-Prerequisites:
-- Flutter SDK (Dart >= 3.10)
-- Android Studio or Xcode (for device/emulator builds)
+- On-Device AI Assistant (Emotional Support & Study Help)
+  - An optional, local AI provides empathetic responses and concise study suggestions. The assistant runs on-device so user conversations do not leave the phone, protecting privacy.
 
-Commands:
-- Clone: `git clone <repo-url>` and `cd <project-root>`
-- Install deps: `flutter pub get`
-- Generate code (Hive adapters, etc.):
-  `flutter pub run build_runner build --delete-conflicting-outputs`
-- Run: `flutter run -d <device>`
+- Model Downloading for Local AI
+  - The app can download a pretrained model from the project's Kaggle dataset onto the device for offline inference. If direct download is not possible, the model can be transferred to the device manually and installed.
+
+- Privacy & Portability
+  - Designed so core features and AI processing can remain fully local. This approach keeps student data private and simplifies demonstrations in classroom settings.
+
+---
+
 
