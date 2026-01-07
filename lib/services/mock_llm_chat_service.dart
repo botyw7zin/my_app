@@ -20,7 +20,7 @@ class LLMChatService {
     };
 
     String response = 'I hear you. Remember, it\'s okay to feel this way. What specifically would help you right now? I\'m here to support you through your studies. 🌈';
-    
+   
     final lowerMessage = userMessage.toLowerCase();
     for (final key in responses.keys) {
       if (lowerMessage.contains(key)) {
@@ -44,7 +44,7 @@ class LLMChatService {
   }
 
   Future<void> stopGeneration() async {}
-  
+ 
   Future<void> unloadModel() async {
     _isModelLoaded = false;
   }

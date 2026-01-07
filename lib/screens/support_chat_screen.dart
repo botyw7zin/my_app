@@ -14,7 +14,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   final LLMChatService _chatService = LLMChatService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+ 
   List<Map<String, String>> _messages = [];
   bool _isLoading = false;
   bool _isGenerating = false;
@@ -28,7 +28,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 
   Future<void> _initializeChat() async {
     setState(() => _isLoading = true);
-    
+   
     final available = await _chatService.isModelAvailable();
     if (!available) {
       if (mounted) {
@@ -42,35 +42,35 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       setState(() => _isLoading = false);
       return;
     }
-    
+   
     final loaded = await _chatService.loadModel();
     if (!loaded && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to load AI model')),
       );
     }
-    
+   
     setState(() => _isLoading = false);
   }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isGenerating) return;
-    
+   
     setState(() {
       _messages.add({'role': 'user', 'content': text});
       _messageController.clear();
       _isGenerating = true;
       _currentResponse = '';
     });
-    
+   
     _scrollToBottom();
-    
+   
     // Add placeholder for assistant message
     setState(() {
       _messages.add({'role': 'assistant', 'content': ''});
     });
-    
+   
     try {
       await for (final token in _chatService.generateResponse(text, _messages)) {
         setState(() {
@@ -82,7 +82,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     } catch (e) {
       // Handle error
     }
-    
+   
     setState(() {
       _isGenerating = false;
       _currentResponse = '';
@@ -110,7 +110,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         // Set main text and icon colors to white
         title: const Text(
           'Emotional Support Chat',
-          style: TextStyle(color: Colors.white), 
+          style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent, // Transparent to show glass effect
@@ -177,7 +177,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                               itemBuilder: (context, index) {
                                 final msg = _messages[index];
                                 final isUser = msg['role'] == 'user';
-                                
+                               
                                 return Align(
                                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                                   child: Container(
@@ -210,7 +210,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                               },
                             ),
                           ),
-                          
+                         
                           // Input area
                           _buildInputArea(),
                         ],

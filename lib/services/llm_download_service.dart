@@ -4,9 +4,9 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 
 class LLMDownloadService {
-  static const String MODEL_URL = 
-      'https://huggingface.co/lmstudio-community/SmolLM2-1.7B-Instruct-GGUF/resolve/main/SmolLM2-1.7B-Instruct-Q4_K_M.gguf';
-  static const String MODEL_FILENAME = 'smollm2-1.7b-instruct-q4.gguf';
+  static const String MODEL_URL =
+      'https://huggingface.co/Ryscu/mobile_project/resolve/main/studysync_Q4_K_M.gguf';
+  static const String MODEL_FILENAME = 'studysync_Q4_K_M.gguf';
 
   final Dio _dio = Dio();
 
@@ -50,7 +50,7 @@ class LLMDownloadService {
         return true;
       }
 
-      
+     
 
       await _dio.download(
         MODEL_URL,
@@ -67,7 +67,7 @@ class LLMDownloadService {
         ),
       );
 
-      
+     
       return true;
 
     } catch (e) {

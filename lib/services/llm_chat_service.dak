@@ -2,91 +2,81 @@ import 'dart:async';
 import 'package:llama_flutter_android/llama_flutter_android.dart';
 import 'llm_download_service.dart';
 
-
 class LLMChatService {
   LlamaController? _llamaController;
   final LLMDownloadService _downloadService = LLMDownloadService();
 
-
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
 
-
-  // Optimized for mobile speed - smaller is faster
-  static const int MAX_CONTEXT_TOKENS = 256;  // Further reduced for speed
-  static const int MAX_RESPONSE_TOKENS = 150; // Shorter responses = faster
-  static const int RESERVED_TOKENS = MAX_RESPONSE_TOKENS + 30; 
+  // --- CONFIGURATION ---
+  static const int MAX_CONTEXT_TOKENS = 2048;
+  static const int MAX_RESPONSE_TOKENS = 256;
+ 
+  // Safety buffer: If we get this close to the limit, we trigger a reset.
+  static const int RESERVED_TOKENS = MAX_RESPONSE_TOKENS + 200;
   static const int AVAILABLE_HISTORY_TOKENS = MAX_CONTEXT_TOKENS - RESERVED_TOKENS;
-
-
-  // Minimal system prompt saves processing time
-  static const String SYSTEM_PROMPT = """You are a supportive AI helping students. Be warm and concise.""";
-
 
   Future<bool> loadModel() async {
     try {
       final modelPath = await _downloadService.getModelPath();
-      if (modelPath == null) {
-        return false;
-      }
-
+      if (modelPath == null) return false;
 
       _llamaController ??= LlamaController();
 
-
-      // Optimized loading parameters for speed
       await _llamaController!.loadModel(
         modelPath: modelPath,
         contextSize: MAX_CONTEXT_TOKENS,
-        threads: 2,  // Reduced from 4 - better for mobile
+        threads: 4,
       );
-
 
       _isModelLoaded = true;
       print('Model loaded with context: $MAX_CONTEXT_TOKENS');
       return true;
     } catch (e) {
       _isModelLoaded = false;
+      print('Load model error: $e');
       return false;
     }
   }
 
-
+  // Helper to estimate token usage
   int _estimateTokens(String text) {
-    return (text.length / 4).ceil();
+    return (text.length / 3.0).ceil();
   }
 
-
-  // Keep only last 2 exchanges maximum
+  /// Manages history.
+  /// FIX 1: "Memory Reset" - If the context is full, it returns an empty list
+  /// effectively wiping the memory for this turn to prevent errors.
   List<Map<String, String>> _manageContextWindow(
     List<Map<String, String>> conversationHistory,
     String currentMessage,
   ) {
-    final systemTokens = _estimateTokens(SYSTEM_PROMPT);
+    final systemTokens = 150;
     final currentMessageTokens = _estimateTokens(currentMessage);
-    
+   
     int availableForHistory = AVAILABLE_HISTORY_TOKENS - systemTokens - currentMessageTokens;
-    
-    if (availableForHistory <= 0) {
+
+    // --- HARD RESET LOGIC ---
+    // If we don't have enough space for even a small history,
+    // we reset the context completely.
+    if (availableForHistory < 100) {
+      print("Context limit reached! Performing Memory Reset.");
       return [];
     }
 
-
-    // Keep only last 4 messages (2 exchanges) for speed
-    final recentHistory = conversationHistory.length > 4 
+    // Sliding Window: Keep last 4 messages
+    final recentHistory = conversationHistory.length > 4
         ? conversationHistory.sublist(conversationHistory.length - 4)
         : conversationHistory;
 
-
     final List<Map<String, String>> fittingHistory = [];
     int usedTokens = 0;
-
 
     for (int i = recentHistory.length - 1; i >= 0; i--) {
       final message = recentHistory[i];
       final messageText = '${message['role']}: ${message['content']}';
       final messageTokens = _estimateTokens(messageText);
-
 
       if (usedTokens + messageTokens <= availableForHistory) {
         fittingHistory.insert(0, message);
@@ -95,173 +85,171 @@ class LLMChatService {
         break;
       }
     }
-
-
     return fittingHistory;
   }
 
+  String? _detectLanguageRequest(String message) {
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('arabic') ||
+        lowerMessage.contains('tunisian') ||
+        lowerMessage.contains('darija') ||
+        lowerMessage.contains('عربي') ||
+        lowerMessage.contains('تونسي')) return 'Tunisian Arabic';
+    if (lowerMessage.contains('french') ||
+        lowerMessage.contains('français')) return 'French';
+    return null;
+  }
 
-  Stream<String> generateResponse(String userMessage, List<Map<String, String>> conversationHistory) async* {
+  Stream<String> generateResponse(
+    String userMessage,
+    List<Map<String, String>> conversationHistory,
+  ) async* {
     if (!_isModelLoaded || _llamaController == null) {
       yield 'Please download the AI model from settings first.';
       return;
     }
 
-
     try {
       final managedHistory = _manageContextWindow(conversationHistory, userMessage);
-      final prompt = _buildPrompt(userMessage, managedHistory);
-      
-      print('Generating with ~${_estimateTokens(prompt)} tokens');
-
+      final requestedLanguage = _detectLanguageRequest(userMessage);
+     
+      final prompt = _buildPrompt(userMessage, managedHistory, requestedLanguage);
+      print("PROMPT >>>\n$prompt\n<<< END PROMPT");
 
       final buffer = StringBuffer();
-      int tokenCount = 0;
       bool hasYielded = false;
-
 
       await for (final token in _llamaController!.generate(
         prompt: prompt,
         maxTokens: MAX_RESPONSE_TOKENS,
-        temperature: 0.8,      // Slightly higher for variety
-        topK: 30,              // Reduced for faster sampling
-        topP: 0.92,            // Adjusted for balance
-        repeatPenalty: 1.05,
+        temperature: 0.7,
+        topK: 50,
+        topP: 0.9,
+        repeatPenalty: 1.1,
       )) {
-        tokenCount++;
-        hasYielded = true;
-        
-        // Check for stop patterns less frequently (every 5 tokens)
-        if (tokenCount % 5 == 0 && _shouldStopGeneration(buffer.toString() + token)) {
-          break;
+        // FIX 2: Check for leakage BEFORE adding the token to the buffer or yielding it.
+        final potentialText = buffer.toString() + token;
+       
+        if (_shouldStopGeneration(potentialText)) {
+          print('STOPPING: Detected stop pattern or prompt leakage.');
+          break; // Break the loop immediately. Do NOT yield this token.
         }
-        
+       
+        hasYielded = true;
         buffer.write(token);
         yield token;
       }
 
-
-      if (!hasYielded || buffer.isEmpty) {
-        yield 'I had trouble responding. Try a shorter message.';
-      }
+      if (!hasYielded) yield '...';
+     
     } catch (e) {
       print('Generation error: $e');
-      yield 'Error occurred. Please try again with a shorter message.';
+      yield 'Error occurred. Please try a shorter message.';
     }
   }
 
-
+  /// FIX 3: Strict Stop Logic
+  /// This detects if the model is trying to write "###" or recite instructions.
   bool _shouldStopGeneration(String currentText) {
-    // Very simple stop check - only on double newlines
-    return currentText.contains('\n\nUser:') || 
-           currentText.contains('\n\nHuman:') ||
-           currentText.length > 800; // Hard limit for safety
-  }
- 
-
-  String _buildPrompt(String userMessage, List<Map<String, String>> history) {
-    final buffer = StringBuffer();
-    buffer.write(SYSTEM_PROMPT);
-    buffer.write('\n\n');
-
-
-    // Add only managed history
-    for (final msg in history) {
-      buffer.write('${msg['role'] == 'user' ? 'User' : 'Assistant'}: ${msg['content']}\n');
+    // If the model generates "###", it is trying to start a new section
+    // or hallucinating the system prompt structure. CUT IT OFF.
+    if (currentText.contains('###')) {
+      return true;
     }
 
+    // Fallback: If it starts writing "User:" or "Assistant:" manually
+    final lowerText = currentText.toLowerCase();
+    if (lowerText.contains('\nuser:') || lowerText.contains('\nassistant:')) {
+      return true;
+    }
 
-    buffer.write('User: $userMessage\nAssistant:');
-    return buffer.toString();
+    // Standard End of Sequence tokens
+    if (currentText.contains('</s>') ||
+        currentText.contains('<|im_end|>') ||
+        currentText.contains('[INST]')) {
+      return true;
+    }
+   
+    return false;
   }
 
+  String _buildPrompt(String userMessage, List<Map<String, String>> history, [String? requestedLanguage]) {
+    final sb = StringBuffer();
+   
+    // System Section
+    sb.writeln('### System:');
+    sb.writeln('You are an empathetic emotional support coach. Keep responses under 100 words.');
+   
+    if (requestedLanguage != null) {
+      sb.writeln('IMPORTANT: Respond ONLY in $requestedLanguage.');
+    } else {
+      sb.writeln('Respond in the same language as the user.');
+    }
+    sb.writeln('');
+
+    // History Section
+    for (final msg in history) {
+      if (msg['role'] == 'user') {
+        sb.writeln('### User:');
+        sb.writeln(msg['content']);
+      } else {
+        sb.writeln('### Assistant:');
+        sb.writeln(msg['content']);
+      }
+      sb.writeln('');
+    }
+   
+    // Current Message Section
+    sb.writeln('### User:');
+    sb.writeln(userMessage);
+   
+    // Trigger
+    sb.writeln('');
+    sb.write('### Assistant:');
+   
+    return sb.toString();
+  }
 
   Future<String> generateSimpleResponse(String userMessage) async {
-    if (!_isModelLoaded || _llamaController == null) {
-      return 'Please download the AI model from settings.';
-    }
-
+    if (!_isModelLoaded || _llamaController == null) return 'Load model first.';
 
     try {
-      // Truncate very long messages
-      final truncatedMessage = userMessage.length > 200 
-          ? userMessage.substring(0, 200) 
-          : userMessage;
-          
-      final prompt = '$SYSTEM_PROMPT\n\nUser: $truncatedMessage\nAssistant:';
-
-
+      final prompt = _buildPrompt(userMessage, [], _detectLanguageRequest(userMessage));
       final buffer = StringBuffer();
-      int tokenCount = 0;
-
 
       await for (final token in _llamaController!.generate(
         prompt: prompt,
         maxTokens: MAX_RESPONSE_TOKENS,
-        temperature: 0.8,
-        topK: 30,
-        topP: 0.92,
-        repeatPenalty: 1.05,
+        temperature: 0.7,
+        topK: 50,
+        topP: 0.9,
       )) {
-        tokenCount++;
-        if (tokenCount % 5 == 0 && _shouldStopGeneration(buffer.toString() + token)) {
-          break;
-        }
-        buffer.write(token);
+         final text = buffer.toString() + token;
+         if (_shouldStopGeneration(text)) break;
+         buffer.write(token);
       }
-
-
-      final response = buffer.toString().trim();
-      return response.isNotEmpty ? response : 'Try a shorter message.';
+      return buffer.toString().trim();
     } catch (e) {
-      print('Error: $e');
-      return 'Error occurred. Please try a shorter message.';
+      return 'Error generating response.';
     }
   }
-
-
-  Map<String, dynamic> getContextStats(List<Map<String, String>> history, String currentMessage) {
-    final managedHistory = _manageContextWindow(history, currentMessage);
-    final prompt = _buildPrompt(currentMessage, managedHistory);
-    final promptTokens = _estimateTokens(prompt);
-    
-    return {
-      'totalMessages': history.length,
-      'fittingMessages': managedHistory.length,
-      'droppedMessages': history.length - managedHistory.length,
-      'estimatedPromptTokens': promptTokens,
-      'maxContextTokens': MAX_CONTEXT_TOKENS,
-      'availableResponseTokens': MAX_RESPONSE_TOKENS,
-      'contextUsagePercent': ((promptTokens / MAX_CONTEXT_TOKENS) * 100).toStringAsFixed(1),
-    };
-  }
-
 
   Future<void> stopGeneration() async {
-    try {
-      await _llamaController?.stop();
-    } catch (e) {
-      print('Stop error: $e');
-    }
+    await _llamaController?.stop();
   }
-
 
   Future<void> unloadModel() async {
-    try {
-      await _llamaController?.dispose();
-      _llamaController = null;
-      _isModelLoaded = false;
-    } catch (e) {
-      print('Unload error: $e');
-    }
+    await _llamaController?.dispose();
+    _llamaController = null;
+    _isModelLoaded = false;
   }
 
+  // --- Required Methods for UI ---
 
   Future<bool> isModelAvailable() async {
     final modelPath = await _downloadService.getModelPath();
     return modelPath != null;
   }
-
 
   void dispose() {
     unloadModel();
