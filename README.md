@@ -39,13 +39,5 @@ Commands:
 - Install deps: `flutter pub get`
 - Generate code (Hive adapters, etc.):
   `flutter pub run build_runner build --delete-conflicting-outputs`
-- (Optional) Configure Firebase (if you want cloud sync):
-  `dart pub global activate flutterfire_cli` then `flutterfire configure`
 - Run: `flutter run -d <device>`
 
-Notes:
-- Ensure `android/app/google-services.json` or `ios/Runner/GoogleService-Info.plist` are present if using Firebase features.
-- For Google Sign-In and background sync, use a physical device when possible.
-- To demo the local AI model: use the included mock LLM on an emulator, or on a physical device open **Settings** → **Download AI Assistant** to fetch the model from the project's Kaggle repo (or manually place model files into `assets/models/local_ai/`).
-
----
