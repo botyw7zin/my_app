@@ -284,10 +284,10 @@ flutter run
 
 <div align="center">
   
-[![Download APK](https://img.shields.io/badge/Download-Latest_APK-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/YOUR_USERNAME/StudySync/releases/latest)
+[![Download APK](https://img.shields.io/badge/Download-Latest_APK-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/botyw7zin/my_app/releases/latest)
 
 **or**
 
-[View All Releases](https://github.com/YOUR_USERNAME/StudySync/releases)
+[View All Releases](https://github.com/botyw7zin/my_app/releases)
 
 </div>
