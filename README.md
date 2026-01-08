@@ -41,7 +41,7 @@ from the INDP2-E Group.
 * ![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase)
 * ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 * ![Llama](https://img.shields.io/badge/AI-Llama-blueviolet?style=for-the-badge)
-* ![Gemma 2 ](https://img.shields.io/badge/Gemma_2_2B-8E75B2?style=for-the-badge&logo=google&logoColor=white)
+* ![Gemma 2 ](https://img.shields.io/badge/Gemma_2_2B-4285F4?style=for-the-badge&logo=google&logoColor=white)
 
 ---
 
