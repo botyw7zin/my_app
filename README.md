@@ -273,10 +273,11 @@ flutter run
 - `flutter build apk --release` - Build a release APK for Android.
 - `flutter build apk --split-per-abi` - Build optimized APKs for specific architectures.
 - `flutter clean` - Clear build cache.
+```
 ├── pubspec.lock
 ├── pubspec.yaml
 └── README.md
-
+```
 
 
 
