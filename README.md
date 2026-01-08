@@ -226,7 +226,7 @@ my_app/
 ├── flutter_01.png
 ├── pubspec.lock
 ├── pubspec.yaml
-├── README.md
+└──  README.md
 
 ````
 
