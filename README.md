@@ -140,7 +140,7 @@ When enabled, local changes are synchronized to a cloud backend in the backgroun
 An optional, local AI provides empathetic responses and concise study suggestions. The assistant runs on-device so user conversations do not leave the phone, protecting privacy.
 
 ### Model Downloading
-The app can download a pretrained model from the project's Kaggle dataset onto the device for offline inference. If direct download is not possible, the model can be transferred to the device manually.
+The app can download a pretrained model from the project's Hugging Face onto the device for offline inference. If direct download is not possible, the model can be transferred to the device manually.
 
 ---
 
