@@ -157,7 +157,7 @@ The app can download a pretrained model from the project's Kaggle dataset onto t
 ## 📂 Project Structure
 
 ```text
-MY_APP/
+my_app/
 ├── .dart_tool/
 ├── android/
 ├── assets/
@@ -224,6 +224,9 @@ MY_APP/
 ├── firestore.indexes.json
 ├── firestore.rules
 ├── flutter_01.png
+├── pubspec.lock
+├── pubspec.yaml
+├── README.md
 
 ````
 
