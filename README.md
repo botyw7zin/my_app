@@ -6,7 +6,7 @@
     style="border-radius: 20%;"
     alt="StudySync Logo"
   />
-  <h1 style="margin: 12px 0 0 0;">StudySync — Mobile Study Companion</h1>
+  <h1 style="margin: 12px 0 0 0;">StudySync — Study Management Mobile App </h1>
 
   <br />
   <br />
