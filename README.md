@@ -51,7 +51,7 @@ The UI features a clean, student-focused design including a Dashboard, Subject M
   <table>
     <tr>
       <td align="center">
-        <img src="YOUR_IMAGE_LINK_HERE" width="200" alt="Home Screen" />
+        <img src="![Image](https://github.com/user-attachments/assets/87711b7c-a8fc-4611-b558-d9ec7978ddba)" width="200" alt="Home Screen" />
         <br />
         <sub><b>Home Dashboard</b></sub>
       </td>
