@@ -17,6 +17,8 @@
     <a href="https://dart.dev/"><img src="https://img.shields.io/badge/Dart-%230175C2.svg?logo=dart&logoColor=white" alt="Dart" /></a>
     <a href="https://firebase.google.com/"><img src="https://img.shields.io/badge/Firebase-039BE5?logo=Firebase&logoColor=white" alt="Firebase" /></a>
     <a href="https://www.android.com/"><img src="https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white" alt="Android" /></a>
+    <a href="https://deepmind.google/models/gemma/)"><img src="https://img.shields.io/badge/Gemma_2_2B-8E75B2?style=for-the-badge&logo=google&logoColor=white" alt="Android" /></a>
+
   </p>
 </div>
 
@@ -39,80 +41,80 @@ from the INDP2-E Group.
 * ![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase)
 * ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 * ![Llama](https://img.shields.io/badge/AI-Llama-blueviolet?style=for-the-badge)
-* ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+* ![Gemma 2 ](https://img.shields.io/badge/Gemma_2_2B-8E75B2?style=for-the-badge&logo=google&logoColor=white)
 
 ---
 
 ## 📱 Frontend Preview (UI)
 
-The UI features a clean, student-focused design including a Dashboard, Subject Management, Social features, and an AI Chat interface.
+The UI features a clean, student-focused design including Sign-in and Sign-up pages, Subject - Project  Management pages , Chatbot page .......
 
 <div align="center">
   <table>
     <tr>
       <td align="center">
-        <img src="https://github.com/user-attachments/assets/2e744888-db42-4d1b-9f59-ba33da814b51" width="200" alt="Landing age" />
+        <img src="https://github.com/user-attachments/assets/2e744888-db42-4d1b-9f59-ba33da814b51" width="200" alt="Landing Page" />
         <br />
-        <sub><b>Home Dashboard</b></sub>
+        <sub><b>Landing Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/aff78054-f9a0-4e16-bd58-49b752e6d567" width="200" alt="Chat Screen" />
         <br />
-        <sub><b>AI Support Chat</b></sub>
+        <sub><b>Sign in Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/b4b7cbf9-2fd7-404c-8265-86b7e3e1ca5a" width="200" alt="Subjects Screen" />
         <br />
-        <sub><b>Subject Manager</b></sub>
+        <sub><b>Sign up Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/96b1dc3b-fbae-4a75-9314-a296b81880b1" width="200" alt="Timer Screen" />
         <br />
-        <sub><b>Study Timer</b></sub>
+        <sub><b>Home Page</b></sub>
       </td>
     </tr>
     <tr>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/8b7facd3-eb2a-4be0-82a4-fe9924bb15ef" width="200" alt="Screen 5" />
         <br />
-        <sub><b>Feature Name 5</b></sub>
+        <sub><b>Add Project Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/dc59bf84-ede5-4106-866b-31ba8948c629" width="200" alt="Screen 6" />
         <br />
-        <sub><b>Feature Name 6</b></sub>
+        <sub><b>Subjects - Projects Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/feef0070-e87e-4311-90ed-3dcec7147825" width="200" alt="Screen 7" />
         <br />
-        <sub><b>Feature Name 7</b></sub>
+        <sub><b>Timer Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/1d275527-de2c-4105-a732-7997cc2b2e75" width="200" alt="Screen 8" />
         <br />
-        <sub><b>Feature Name 8</b></sub>
+        <sub><b>Model Not Downloaded Page</b></sub>
       </td>
     </tr>
     <tr>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/51a78450-5dc8-438c-8e86-8bf3d48db02c" width="200" alt="Screen 9" />
         <br />
-        <sub><b>Feature Name 9</b></sub>
+        <sub><b>Model Download Page </b></sub>
       </td>
       <td align="center">
-        <img src="(https://github.com/user-attachments/assets/7ef52106-2266-4315-a2f0-b48a7db99a41" width="200" alt="Screen 10" />
+        <img src="https://github.com/user-attachments/assets/7ef52106-2266-4315-a2f0-b48a7db99a41" width="200" alt="Screen 10" />
         <br />
-        <sub><b>Feature Name 10</b></sub>
+        <sub><b>Emotional Support Chatbot Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/87711b7c-a8fc-4611-b558-d9ec7978ddba" width="200" alt="Screen 11" />
         <br />
-        <sub><b>Feature Name 11</b></sub>
+        <sub><b>Add Friend Page</b></sub>
       </td>
       <td align="center">
         <img src="https://github.com/user-attachments/assets/71de60a0-0831-47be-b71d-5236ca307315" width="200" alt="Screen 12" />
         <br />
-        <sub><b>Feature Name 12</b></sub>
+        <sub><b>User Settings Page</b></sub>
       </td>
     </tr>
   </table>
@@ -148,6 +150,7 @@ The app can download a pretrained model from the project's Kaggle dataset onto t
 - **Local Database:** SQFlite (Offline persistence)
 - **Backend Services:** Firebase Auth, Firestore (Optional Sync)
 - **AI Engine:** Llama via `llama_flutter` (On-device inference)
+- **AI Model:** Gemma 2 2B Model Quantized ( Quantization with QLoRA : only 2.5 Million trainable parameters out of 2 Billion , model weights stored in a 4 bit format )
 
 ---
 
@@ -270,3 +273,18 @@ flutter run
 ├── pubspec.lock
 ├── pubspec.yaml
 └── README.md
+
+
+
+
+## 📥 APK
+
+<div align="center">
+  
+[![Download APK](https://img.shields.io/badge/Download-Latest_APK-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/YOUR_USERNAME/StudySync/releases/latest)
+
+**or**
+
+[View All Releases](https://github.com/YOUR_USERNAME/StudySync/releases)
+
+</div>
