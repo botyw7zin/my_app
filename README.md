@@ -17,7 +17,7 @@
     <a href="https://dart.dev/"><img src="https://img.shields.io/badge/Dart-%230175C2.svg?logo=dart&logoColor=white" alt="Dart" /></a>
     <a href="https://firebase.google.com/"><img src="https://img.shields.io/badge/Firebase-039BE5?logo=Firebase&logoColor=white" alt="Firebase" /></a>
     <a href="https://www.android.com/"><img src="https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white" alt="Android" /></a>
-    <a href="https://deepmind.google/models/gemma/)"><img src="https://img.shields.io/badge/Gemma_2_2B-8E75B2?style=for-the-badge&logo=google&logoColor=white" alt="Android" /></a>
+    <a href="https://deepmind.google/models/gemma/)"><img src="https://img.shields.io/badge/Gemma_2_2B-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Android" /></a>
 
   </p>
 </div>
