@@ -51,24 +51,68 @@ The UI features a clean, student-focused design including a Dashboard, Subject M
   <table>
     <tr>
       <td align="center">
-        <img src="https://github.com/user-attachments/assets/2e744888-db42-4d1b-9f59-ba33da814b51" width="200" alt="Home Screen" />
+        <img src="https://github.com/user-attachments/assets/2e744888-db42-4d1b-9f59-ba33da814b51" width="200" alt="Landing age" />
         <br />
         <sub><b>Home Dashboard</b></sub>
       </td>
       <td align="center">
-        <img src="YOUR_IMAGE_LINK_HERE" width="200" alt="Chat Screen" />
+        <img src="https://github.com/user-attachments/assets/aff78054-f9a0-4e16-bd58-49b752e6d567" width="200" alt="Chat Screen" />
         <br />
         <sub><b>AI Support Chat</b></sub>
       </td>
       <td align="center">
-        <img src="YOUR_IMAGE_LINK_HERE" width="200" alt="Subjects Screen" />
+        <img src="https://github.com/user-attachments/assets/b4b7cbf9-2fd7-404c-8265-86b7e3e1ca5a" width="200" alt="Subjects Screen" />
         <br />
         <sub><b>Subject Manager</b></sub>
       </td>
-       <td align="center">
-        <img src="YOUR_IMAGE_LINK_HERE" width="200" alt="Timer Screen" />
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/96b1dc3b-fbae-4a75-9314-a296b81880b1" width="200" alt="Timer Screen" />
         <br />
         <sub><b>Study Timer</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/8b7facd3-eb2a-4be0-82a4-fe9924bb15ef" width="200" alt="Screen 5" />
+        <br />
+        <sub><b>Feature Name 5</b></sub>
+      </td>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/dc59bf84-ede5-4106-866b-31ba8948c629" width="200" alt="Screen 6" />
+        <br />
+        <sub><b>Feature Name 6</b></sub>
+      </td>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/feef0070-e87e-4311-90ed-3dcec7147825" width="200" alt="Screen 7" />
+        <br />
+        <sub><b>Feature Name 7</b></sub>
+      </td>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/1d275527-de2c-4105-a732-7997cc2b2e75" width="200" alt="Screen 8" />
+        <br />
+        <sub><b>Feature Name 8</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/51a78450-5dc8-438c-8e86-8bf3d48db02c" width="200" alt="Screen 9" />
+        <br />
+        <sub><b>Feature Name 9</b></sub>
+      </td>
+      <td align="center">
+        <img src="(https://github.com/user-attachments/assets/7ef52106-2266-4315-a2f0-b48a7db99a41" width="200" alt="Screen 10" />
+        <br />
+        <sub><b>Feature Name 10</b></sub>
+      </td>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/87711b7c-a8fc-4611-b558-d9ec7978ddba" width="200" alt="Screen 11" />
+        <br />
+        <sub><b>Feature Name 11</b></sub>
+      </td>
+      <td align="center">
+        <img src="https://github.com/user-attachments/assets/71de60a0-0831-47be-b71d-5236ca307315" width="200" alt="Screen 12" />
+        <br />
+        <sub><b>Feature Name 12</b></sub>
       </td>
     </tr>
   </table>
